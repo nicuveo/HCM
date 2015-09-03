@@ -146,8 +146,8 @@ input fs = do
               T.putStr $ T.format "How many of {} {}M {} card {}? [{}] " (show $ cardClass card,
                                                                           show $ cardCost card,
                                                                           show $ cardRarity card,
-                                                                          runCardName $ cardName card,
-                                                                          show $ fromEnum $ cardQuantity card)
+                                                                          show $ cardName card,
+                                                                          show $ cardQuantity card)
               hFlush stdout
               answer <- getLine
               case answer of
@@ -165,13 +165,13 @@ list fs = do
     putStr $ render id id id $ Table
         (Group SingleLine [Group NoLine $ Header <$> mkHeader s c | c <- cardClasses, not $ S.null $ s @= c])
         (Group SingleLine $ Header <$> c)
-        [[show c, show s, show r, runCardName n, show $ fromEnum q] | (Card s _ c r n q) <- l]
+        [[show c, show s, show r, show n, show q] | (Card s _ c r n q) <- l]
     where mkHeader s c = (show c) : (replicate (size (s @= c) - 1) $ "")
 
 names :: IO ()
 names = do
     cards <- loadForSure
-    sequence_ $ putStrLn . runCardName . cardName <$> toAscList byName cards
+    sequence_ $ print . cardName <$> toAscList byName cards
     where byName = Proxy :: Proxy CardName
 
 help :: IO ()
