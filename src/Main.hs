@@ -138,10 +138,11 @@ cstats = do
 input :: [String] -> IO ()
 input fs = do
     let byCost = Proxy :: Proxy CardCost
-    cards <- loadForSure >>= mkFilters fs
+    origin <- loadForSure
+    cards  <- mkFilters fs origin
     putStrLn "Please input your collection card by card."
     putStrLn "Expected values: 0, 1, 2."
-    save =<< fromList <$> (sequence $ ask <$> (sort $ toList cards))
+    save . (`S.union` origin) =<< fromList <$> (sequence $ ask <$> (sort $ toList cards))
     where ask card = do
               T.putStr $ T.format "How many of {} {}M {} card {}? [{}] " (show $ cardClass card,
                                                                           show $ cardCost card,
