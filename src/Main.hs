@@ -123,6 +123,7 @@ cstats = do
          [[stat (cards @= r @= c) | r <- cardRarities] ++ [stat (cards @= c)] | c <- cardClasses] ++
          [[stat (cards @= r)      | r <- cardRarities] ++ [stat (cards)]])
 
+    putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map dust $ toList $ cards @= One)
     sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 7 ' ' $ show s,
                                                           T.left 3 ' ' $ show $ round $ packValue s cards)
               | s <- cardSets]
@@ -130,6 +131,14 @@ cstats = do
     where stat cards = let t = 2 * (size cards) - (size $ cards @= Legendary)
                            m = sum $ count <$> toList cards in
                        T.unpack $ T.format "{} / {}" (T.left 3 ' ' m, T.left 3 ' ' t)
+          dust :: Card -> Float
+          dust c = case (cardRarity c, cardQuantity c) of
+              (Legendary, Zero) -> v
+              (Legendary, _)    -> 0
+              (_,         Zero) -> v * 2
+              (_,         One)  -> v
+              _                 -> 0
+              where v = craftValue $ cardRarity c
           count c = let r = fromEnum $ cardQuantity c in
               if cardRarity c == Legendary
                   then min r 1
