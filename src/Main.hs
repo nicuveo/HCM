@@ -123,7 +123,7 @@ cstats = do
          [[stat (cards @= r @= c) | r <- cardRarities] ++ [stat (cards @= c)] | c <- cardClasses] ++
          [[stat (cards @= r)      | r <- cardRarities] ++ [stat (cards)]])
 
-    putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map dust $ toList $ cards @= One)
+    putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map dust $ toList $ cards)
     sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 7 ' ' $ show s,
                                                           T.left 3 ' ' $ show $ round $ packValue s cards)
               | s <- cardSets]
