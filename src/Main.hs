@@ -8,11 +8,13 @@
 import           Control.Applicative
 import           Control.Monad.Error
 import           Data.IxSet            as S
+import qualified Data.ByteString.Lazy  as B
 import           Data.List             as L (foldl', sort, stripPrefix, maximumBy)
 import qualified Data.Text.Format      as T
 import qualified Data.Text.Lazy        as T
 import qualified Data.Text.Lazy.IO     as T
-import           Network.HTTP.Conduit  hiding (Proxy)
+import           Network.HTTP.Client hiding (Proxy)
+import           Network.HTTP.Client.TLS
 import           Network.URL
 import           System.Console.ANSI
 import           System.Console.GetOpt
@@ -30,7 +32,7 @@ import           Persistence
 
 -- config
 
-cardsURL  = "http://hearthstonejson.com/json/AllSets.json"
+cardsURL  = "https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json"
 cardsFile = "cards.json"
 appName   = "hcm"
 
@@ -42,7 +44,13 @@ run :: ErrorT String IO a -> IO a
 run = runErrorT >=> either fail return
 
 refCards :: IO Cards
-refCards = run $ readCardsRefM =<< simpleHttp cardsURL
+refCards = do
+    -- manager  <- newManager tlsManagerSettings
+    -- request  <- parseUrl cardsURL
+    -- response <- httpLbs request manager
+    -- run $ readCardsRefM $ responseBody response
+    content <- B.readFile "cards.collectible.json"
+    run $ readCardsRefM content
 
 load :: IO (Maybe Cards)
 load = run $ loadCards cardsFile appName
@@ -87,6 +95,7 @@ mkFilters fs = L.foldl' (>=>) return $ mkFilter <$> fs
           mkFilter "s=c"                        = return . (@= Common)
           mkFilter "s=gvg"                      = return . (@= GoblinsVsGnomes)
           mkFilter "s=tgt"                      = return . (@= GrandTournament)
+          mkFilter "s=wog"                      = return . (@= WhispersOldGods)
           mkFilter "owned"                      = return . (@+ [One, More])
           mkFilter f                            = const $ exit $ "unknown filter " ++ f
 
@@ -123,7 +132,8 @@ cstats = do
          [[stat (cards @= r @= c) | r <- cardRarities] ++ [stat (cards @= c)] | c <- cardClasses] ++
          [[stat (cards @= r)      | r <- cardRarities] ++ [stat (cards)]])
 
-    putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map dust $ toList $ cards)
+    putStrLn $ "Current cards dust value: " ++ (show $ round $ sum $ map cDust $ toList $ cards)
+    putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map mDust $ toList $ cards)
     sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 7 ' ' $ show s,
                                                           T.left 3 ' ' $ show $ round $ packValue s cards)
               | s <- cardSets]
@@ -131,8 +141,10 @@ cstats = do
     where stat cards = let t = 2 * (size cards) - (size $ cards @= Legendary)
                            m = sum $ count <$> toList cards in
                        T.unpack $ T.format "{} / {}" (T.left 3 ' ' m, T.left 3 ' ' t)
-          dust :: Card -> Float
-          dust c = case (cardRarity c, cardQuantity c) of
+          cDust :: Card -> Float
+          cDust c = (realToFrac $ fromEnum (cardQuantity c)) * (craftValue $ cardRarity c)
+          mDust :: Card -> Float
+          mDust c = case (cardRarity c, cardQuantity c) of
               (Legendary, Zero) -> v
               (Legendary, _)    -> 0
               (_,         Zero) -> v * 2

@@ -51,6 +51,7 @@ import           Text.Read            (readMaybe)
 data CardSet = Classic
              | GoblinsVsGnomes
              | GrandTournament
+             | WhispersOldGods
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -101,6 +102,7 @@ instance Show CardSet where
     show Classic         = "Classic"
     show GoblinsVsGnomes = "GvG"
     show GrandTournament = "TGT"
+    show WhispersOldGods = "WOG"
 
 instance Show CardName where
     show = runCardName
@@ -125,12 +127,32 @@ instance Ord Card where
 
 
 instance FromJSON CardClass where
-    parseJSON (String s) = maybe (expecting "CardClass" s) return $ readMaybe $ unpack s
+    parseJSON (String "DRUID"  ) = return Druid
+    parseJSON (String "HUNTER" ) = return Hunter
+    parseJSON (String "MAGE"   ) = return Mage
+    parseJSON (String "PALADIN") = return Paladin
+    parseJSON (String "PRIEST" ) = return Priest
+    parseJSON (String "ROGUE"  ) = return Rogue
+    parseJSON (String "SHAMAN" ) = return Shaman
+    parseJSON (String "WARLOCK") = return Warlock
+    parseJSON (String "WARRIOR") = return Warrior
+    parseJSON (String s) = expecting    "CardClass" s
     parseJSON v          = typeMismatch "CardClass" v
 
 instance FromJSON CardRarity where
-    parseJSON (String s) = maybe (expecting "CardRarity" s) return $ readMaybe $ unpack s
+    parseJSON (String "COMMON"   ) = return Common
+    parseJSON (String "RARE"     ) = return Rare
+    parseJSON (String "EPIC"     ) = return Epic
+    parseJSON (String "LEGENDARY") = return Legendary
+    parseJSON (String s) = expecting    "CardRarity" s
     parseJSON v          = typeMismatch "CardRarity" v
+
+instance FromJSON (Maybe CardSet) where
+    parseJSON (String "EXPERT1") = return $ Just Classic
+    parseJSON (String "GVG"    ) = return $ Just GoblinsVsGnomes
+    parseJSON (String "TGT"    ) = return $ Just GrandTournament
+    parseJSON (String "OG"     ) = return $ Just WhispersOldGods
+    parseJSON _                  = return $ Nothing
 
 instance FromJSON Card where
     parseJSON (Object o) = Card
@@ -195,25 +217,19 @@ readCardsRefM = either throwError return . readCardsRef
 expecting :: (Monad m, Show a) => String -> a -> m b
 expecting t v = fail $ "expecting a " ++ t ++ ", got: " ++ (show v)
 
-parseCard :: CardSet -> Object -> Parser (Maybe Card)
-parseCard s o = do
+parseCard :: Object -> Parser (Maybe Card)
+parseCard o = do
     collectible <- o .:? "collectible" .!= False
-    if collectible
-        then liftM Just $ Card
-             <$> return s
+    set         <- o .:  "set"
+    case (collectible, set) of
+        (True, Just s) -> liftM Just $ Card
+             <$> (return s)
              <*> o .:? "playerClass" .!= Neutral
              <*> (CardCost <$> o .: "cost")
-             <*> o .:? "rarity" .!= Common
+             <*> o .: "rarity"
              <*> (CardName <$> o .: "name")
              <*> return Zero
-        else return Nothing
+        _ -> return Nothing
 
-parseCards :: Object -> Parser Cards
-parseCards obj = S.fromList <$> concat <$> sequence (parseCardSet <$> cardSets)
-    where parseCardSet set = do
-              values <- obj .: pack (name set)
-              let cards = withObject "Card" (parseCard set) <$> values
-              catMaybes <$> sequence (V.toList cards)
-          name Classic         = "Classic"
-          name GoblinsVsGnomes = "Goblins vs Gnomes"
-          name GrandTournament = "The Grand Tournament"
+parseCards :: Array -> Parser Cards
+parseCards a = S.fromList <$> catMaybes <$> (sequence $ V.toList $ withObject "Card" parseCard <$> a)
