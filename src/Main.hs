@@ -65,13 +65,13 @@ loadForSure = load >>= maybe (exit "No card collection found, please update.") r
 
 incr :: CardQuantity -> CardQuantity
 incr Zero = One
-incr One  = More
-incr More = More
+incr One  = Many
+incr Many = Many
 
 decr :: CardQuantity -> CardQuantity
 decr Zero = Zero
 decr One  = Zero
-decr More = One
+decr Many = One
 
 updateQuantity :: (CardQuantity -> CardQuantity) -> CardName -> Cards -> IO Cards
 updateQuantity func name set = case getOne $ set @= name of
@@ -87,12 +87,12 @@ mkFilters fs = L.foldl' (>=>) return $ mkFilter <$> fs
           mkFilter (stripPrefix "c=" -> Just f) = return . (@= (CardCost $ read f))
           mkFilter "q=0"                        = return . (@= Zero)
           mkFilter "q=1"                        = return . (@= One)
-          mkFilter "q=2"                        = return . (@= More)
+          mkFilter "q=2"                        = return . (@= Many)
           mkFilter "s=c"                        = return . (@= Classic)
           mkFilter "s=gvg"                      = return . (@= GoblinsVsGnomes)
           mkFilter "s=tgt"                      = return . (@= GrandTournament)
           mkFilter "s=wog"                      = return . (@= WhispersOldGods)
-          mkFilter "owned"                      = return . (@+ [One, More])
+          mkFilter "owned"                      = return . (@+ [One, Many])
           mkFilter "missing"                    = return . (@+ [One, Zero])
           mkFilter f                            = const $ exit $ "unknown filter " ++ f
 
@@ -173,7 +173,7 @@ input fs = do
                   ""  -> return $ card
                   "0" -> return $ card { cardQuantity = Zero }
                   "1" -> return $ card { cardQuantity = One  }
-                  "2" -> return $ card { cardQuantity = More }
+                  "2" -> return $ card { cardQuantity = Many }
                   _   -> ask card
 
 list :: [String] -> IO ()

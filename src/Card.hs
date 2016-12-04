@@ -74,7 +74,7 @@ data CardRarity = Common
 
 data CardQuantity = Zero
                   | One
-                  | More
+                  | Many
                   deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 newtype CardName = CardName { runCardName :: String }
@@ -113,7 +113,7 @@ instance Show CardCost where
 instance Show CardQuantity where
     show Zero = "0"
     show One  = "1"
-    show More = "2"
+    show Many = "2"
 
 
 instance Eq Card where
