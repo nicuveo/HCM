@@ -32,6 +32,8 @@ _hcm()
  s=c\
  s=gvg\
  s=tgt\
+ s=wog\
+ s=gad\
  c="
 
     if [ "$COMP_CWORD" = 1 ] ; then

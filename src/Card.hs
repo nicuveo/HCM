@@ -13,6 +13,7 @@ module Card (
     CardSet(..),
     CardClass(..),
     CardCost(..),
+    CardId(..),
     CardRarity(..),
     CardName(..),
     CardQuantity(..),
@@ -35,6 +36,7 @@ import           Control.Monad.Except
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.ByteString.Lazy hiding (concat, map, pack, unpack)
+import           Data.Function
 import           Data.IxSet           as S
 import           Data.List            (stripPrefix)
 import           Data.Maybe
@@ -52,6 +54,7 @@ data CardSet = Classic
              | GoblinsVsGnomes
              | GrandTournament
              | WhispersOldGods
+             | GangsOfGadgetzan
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -77,13 +80,17 @@ data CardQuantity = Zero
                   | Many
                   deriving (Eq, Ord, Enum, Bounded, Typeable)
 
-newtype CardName = CardName { runCardName :: String }
+newtype CardName = CardName { getCardName :: String }
                  deriving (Eq, Ord, Typeable)
 
-newtype CardCost = CardCost { runCardCost :: Int }
-                  deriving (Eq, Ord, Typeable)
+newtype CardCost = CardCost { getCardCost :: Int }
+                 deriving (Eq, Ord, Typeable)
+
+newtype CardId = CardId { getCardId :: String }
+               deriving (Eq, Ord, Typeable)
 
 data Card = Card {
+    cardId       :: CardId,
     cardSet      :: CardSet,
     cardClass    :: CardClass,
     cardCost     :: CardCost,
@@ -99,31 +106,33 @@ type Cards = IxSet Card
 -- instances
 
 instance Show CardSet where
-    show Classic         = "Classic"
-    show GoblinsVsGnomes = "GvG"
-    show GrandTournament = "TGT"
-    show WhispersOldGods = "WOG"
-
-instance Show CardName where
-    show = runCardName
-
-instance Show CardCost where
-    show = show . runCardCost
+    show Classic          = "Classic"
+    show GoblinsVsGnomes  = "GvG"
+    show GrandTournament  = "TGT"
+    show WhispersOldGods  = "Old Gods"
+    show GangsOfGadgetzan = "Gadgetzan"
 
 instance Show CardQuantity where
     show Zero = "0"
     show One  = "1"
     show Many = "2"
 
+instance Show CardId where
+    show = getCardId
+
+instance Show CardName where
+    show = getCardName
+
+instance Show CardCost where
+    show = show . getCardCost
+
 
 instance Eq Card where
-    c1 == c2 = n1 == n2
-        where n1 = cardName c1
-              n2 = cardName c2
+    (==) = (==) `on` cardId
 
 instance Ord Card where
-    compare (Card s1 h1 c1 r1 n1 _) (Card s2 h2 c2 r2 n2 _) =
-        compare (h1, c1, s1, r1, n1) (h2, c2, s2, r2, n2)
+    compare (Card i1 s1 h1 c1 r1 _ _) (Card i2 s2 h2 c2 r2 _ _) =
+        compare (h1, c1, s1, r1, i1) (h2, c2, s2, r2, i2)
 
 
 instance FromJSON CardClass where
@@ -136,6 +145,7 @@ instance FromJSON CardClass where
     parseJSON (String "SHAMAN" ) = return Shaman
     parseJSON (String "WARLOCK") = return Warlock
     parseJSON (String "WARRIOR") = return Warrior
+    parseJSON (String "NEUTRAL") = return Neutral
     parseJSON (String s) = expecting    "CardClass" s
     parseJSON v          = typeMismatch "CardClass" v
 
@@ -152,17 +162,35 @@ instance FromJSON CardSet where
     parseJSON (String "GVG"    ) = return $ GoblinsVsGnomes
     parseJSON (String "TGT"    ) = return $ GrandTournament
     parseJSON (String "OG"     ) = return $ WhispersOldGods
-    parseJSON (String s) = expecting    "CardSet" s
-    parseJSON v          = typeMismatch "CardSet" v
+    parseJSON (String "GANGS"  ) = return $ GangsOfGadgetzan
+    parseJSON (String s)         = expecting    "CardSet" s
+    parseJSON v                  = typeMismatch "CardSet" v
+
+instance FromJSON CardQuantity where
+    parseJSON = fmap toEnum . parseJSON
+
+instance FromJSON CardId where
+    parseJSON = fmap CardId . parseJSON
+
+instance FromJSON CardName where
+    parseJSON = fmap CardName . parseJSON
+
+instance FromJSON CardCost where
+    parseJSON = fmap CardCost . parseJSON
 
 instance FromJSON Card where
-    parseJSON (Object o) = Card
-                           <$> (toEnum   <$> o .: "set")
-                           <*> (toEnum   <$> o .: "class")
-                           <*> (CardCost <$> o .: "cost")
-                           <*> (toEnum   <$> o .: "rarity")
-                           <*> (CardName <$> o .: "name")
-                           <*> (toEnum   <$> o .: "quantity")
+    parseJSON (Object o) = do
+      card <- Card
+              <$> (o .: "id")
+              <*> (toEnum <$> o .: "set")
+              <*> (toEnum <$> o .: "class")
+              <*> (o .: "cost")
+              <*> (toEnum <$> o .: "rarity")
+              <*> (o .: "name")
+              <*> (toEnum <$> o .: "quantity")
+      if cardRarity card == Legendary && cardQuantity card == Many
+      then return $ card {cardQuantity = One}
+      else return $ card
     parseJSON v          = typeMismatch "Card" v
 
 instance FromJSON Cards where
@@ -171,11 +199,12 @@ instance FromJSON Cards where
 
 
 instance ToJSON Card where
-    toJSON c = object [ "set"      .= (fromEnum    $ cardSet      c)
+    toJSON c = object [ "id"       .= (getCardId   $ cardId       c)
+                      , "set"      .= (fromEnum    $ cardSet      c)
                       , "class"    .= (fromEnum    $ cardClass    c)
-                      , "cost"     .= (runCardCost $ cardCost     c)
+                      , "cost"     .= (getCardCost $ cardCost     c)
                       , "rarity"   .= (fromEnum    $ cardRarity   c)
-                      , "name"     .= (runCardName $ cardName     c)
+                      , "name"     .= (getCardName $ cardName     c)
                       , "quantity" .= (fromEnum    $ cardQuantity c)
                       ]
 
@@ -184,7 +213,8 @@ instance ToJSON Cards where
 
 
 instance Indexable Card where
-  empty = ixSet [ ixFun (pure . cardSet)
+  empty = ixSet [ ixFun (pure . cardId)
+                , ixFun (pure . cardSet)
                 , ixFun (pure . cardClass)
                 , ixFun (pure . cardCost)
                 , ixFun (pure . cardRarity)
@@ -220,15 +250,15 @@ expecting t v = fail $ "expecting a " ++ t ++ ", got: " ++ (show v)
 
 parseCard :: Object -> Parser (Maybe Card)
 parseCard o = do
-    collectible <- o .:? "collectible" .!= False
-    set         <- o .:  "set"
-    case (collectible, set) of
-        (True, Just s) -> liftM Just $ Card
-             <$> (return s)
-             <*> o .:? "playerClass" .!= Neutral
-             <*> (CardCost <$> o .: "cost")
+    let set = parseMaybe (.: "set") o
+    case set of
+        Just s -> liftM Just $ Card
+             <$> o .: "id"
+             <*> return s
+             <*> o .: "playerClass"
+             <*> o .: "cost"
              <*> o .: "rarity"
-             <*> (CardName <$> o .: "name")
+             <*> o .: "name"
              <*> return Zero
         _ -> return Nothing
 

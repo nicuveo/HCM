@@ -75,7 +75,7 @@ decr Many = One
 
 updateQuantity :: (CardQuantity -> CardQuantity) -> CardName -> Cards -> IO Cards
 updateQuantity func name set = case getOne $ set @= name of
-    Nothing -> exit $ "No card named " ++ (runCardName name) ++ "."
+    Nothing -> exit $ "No card named " ++ (getCardName name) ++ "."
     Just c  -> let newQuantity = func $ cardQuantity c
                    newCard = c { cardQuantity = newQuantity } in
                return $ updateIx name newCard set
@@ -92,6 +92,7 @@ mkFilters fs = L.foldl' (>=>) return $ mkFilter <$> fs
           mkFilter "s=gvg"                      = return . (@= GoblinsVsGnomes)
           mkFilter "s=tgt"                      = return . (@= GrandTournament)
           mkFilter "s=wog"                      = return . (@= WhispersOldGods)
+          mkFilter "s=gad"                      = return . (@= GangsOfGadgetzan)
           mkFilter "owned"                      = return . (@+ [One, Many])
           mkFilter "missing"                    = return . (@+ [One, Zero])
           mkFilter f                            = const $ exit $ "unknown filter " ++ f
@@ -131,13 +132,13 @@ cstats = do
 
     putStrLn $ "Current cards dust value: " ++ (show $ round $ sum $ map cDust $ toList $ cards)
     putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map mDust $ toList $ cards)
-    sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 7 ' ' $ show s,
+    sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 9 ' ' $ show s,
                                                           T.left 3 ' ' $ show $ round $ packValue s cards)
               | s <- cardSets]
 
     where stat cards = let t = 2 * (size cards) - (size $ cards @= Legendary)
                            m = sum $ count <$> toList cards in
-                       T.unpack $ T.format "{} / {}" (T.left 3 ' ' m, T.left 3 ' ' t)
+                       T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.right 2 '0' (div (100 * m) t))
           cDust :: Card -> Float
           cDust c = (realToFrac $ fromEnum (cardQuantity c)) * (craftValue $ cardRarity c)
           mDust :: Card -> Float
@@ -184,7 +185,7 @@ list fs = do
     putStr $ render id id id $ Table
         (Group SingleLine [Group NoLine $ Header <$> mkHeader s c | c <- cardClasses, not $ S.null $ s @= c])
         (Group SingleLine $ Header <$> c)
-        [[show c, show s, show r, show n, show q] | (Card s _ c r n q) <- l]
+        [[show c, show s, show r, show n, show q] | (Card _ s _ c r n q) <- l]
     where mkHeader s c = (show c) : (replicate (size (s @= c) - 1) $ "")
 
 names :: IO ()

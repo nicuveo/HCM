@@ -13,7 +13,7 @@ module Persistence (loadCards, saveCards) where
 -- imports
 
 import           Control.Applicative
-import           Control.Monad.Error
+import           Control.Monad.Except
 import           Data.Aeson           (eitherDecode, encode)
 import qualified Data.ByteString.Lazy as B
 import           System.Directory
