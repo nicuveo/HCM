@@ -11,6 +11,7 @@ _hcm()
     cmds="help add del stats update input list"
     filters="\
  owned\
+ missing\
  q=0\
  q=1\
  q=2\
