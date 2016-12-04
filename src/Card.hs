@@ -31,7 +31,7 @@ module Card (
 
 import           Control.Applicative
 import           Control.Arrow
-import           Control.Monad.Error
+import           Control.Monad.Except
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.ByteString.Lazy hiding (concat, map, pack, unpack)
@@ -147,12 +147,13 @@ instance FromJSON CardRarity where
     parseJSON (String s) = expecting    "CardRarity" s
     parseJSON v          = typeMismatch "CardRarity" v
 
-instance FromJSON (Maybe CardSet) where
-    parseJSON (String "EXPERT1") = return $ Just Classic
-    parseJSON (String "GVG"    ) = return $ Just GoblinsVsGnomes
-    parseJSON (String "TGT"    ) = return $ Just GrandTournament
-    parseJSON (String "OG"     ) = return $ Just WhispersOldGods
-    parseJSON _                  = return $ Nothing
+instance FromJSON CardSet where
+    parseJSON (String "EXPERT1") = return $ Classic
+    parseJSON (String "GVG"    ) = return $ GoblinsVsGnomes
+    parseJSON (String "TGT"    ) = return $ GrandTournament
+    parseJSON (String "OG"     ) = return $ WhispersOldGods
+    parseJSON (String s) = expecting    "CardSet" s
+    parseJSON v          = typeMismatch "CardSet" v
 
 instance FromJSON Card where
     parseJSON (Object o) = Card

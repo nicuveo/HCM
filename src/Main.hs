@@ -6,15 +6,15 @@
 -- imports
 
 import           Control.Applicative
-import           Control.Monad.Error
-import           Data.IxSet            as S
+import           Control.Monad.Except
 import qualified Data.ByteString.Lazy  as B
-import           Data.List             as L (foldl', sort, stripPrefix, maximumBy)
+import           Data.IxSet            as S
+import           Data.List             as L (foldl', maximumBy, sort,
+                                             stripPrefix)
 import qualified Data.Text.Format      as T
 import qualified Data.Text.Lazy        as T
 import qualified Data.Text.Lazy.IO     as T
-import           Network.HTTP.Client hiding (Proxy)
-import           Network.HTTP.Client.TLS
+import           Network.HTTP.Simple   hiding (Proxy)
 import           Network.URL
 import           System.Console.ANSI
 import           System.Console.GetOpt
@@ -40,17 +40,13 @@ appName   = "hcm"
 
 -- helpers
 
-run :: ErrorT String IO a -> IO a
-run = runErrorT >=> either fail return
+run :: ExceptT String IO a -> IO a
+run = runExceptT >=> either fail return
 
 refCards :: IO Cards
 refCards = do
-    -- manager  <- newManager tlsManagerSettings
-    -- request  <- parseUrl cardsURL
-    -- response <- httpLbs request manager
-    -- run $ readCardsRefM $ responseBody response
-    content <- B.readFile "cards.collectible.json"
-    run $ readCardsRefM content
+    cardsJson <- httpLBS cardsURL
+    run $ readCardsRefM $ getResponseBody cardsJson
 
 load :: IO (Maybe Cards)
 load = run $ loadCards cardsFile appName
