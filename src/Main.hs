@@ -59,7 +59,7 @@ save :: Cards -> IO ()
 save = run . saveCards cardsFile appName
 
 updateCards :: Cards -> Maybe Cards -> Cards
-updateCards rc = maybe rc (`S.union` rc)
+updateCards rc = maybe rc (`S.intersection` rc)
 
 exit :: String -> IO a
 exit s = putStrLn s >> exitFailure
@@ -92,11 +92,12 @@ mkFilters fs = L.foldl' (>=>) return $ mkFilter <$> fs
           mkFilter "q=0"                        = return . (@= Zero)
           mkFilter "q=1"                        = return . (@= One)
           mkFilter "q=2"                        = return . (@= More)
-          mkFilter "s=c"                        = return . (@= Common)
+          mkFilter "s=c"                        = return . (@= Classic)
           mkFilter "s=gvg"                      = return . (@= GoblinsVsGnomes)
           mkFilter "s=tgt"                      = return . (@= GrandTournament)
           mkFilter "s=wog"                      = return . (@= WhispersOldGods)
           mkFilter "owned"                      = return . (@+ [One, More])
+          mkFilter "missing"                    = return . (@+ [One, Zero])
           mkFilter f                            = const $ exit $ "unknown filter " ++ f
 
 
