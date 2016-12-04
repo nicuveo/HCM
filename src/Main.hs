@@ -216,7 +216,8 @@ help = do
 \\n     c=       filter by cost        c=2\
 \\n     q=       filter by quantity    q=0\
 \\n     s=       filter by set         s=gvg\
-\\n     owned    cards in collection"
+\\n     owned    cards     in collection\
+\\n     missing  cards NOT in collection"
 
 
 
