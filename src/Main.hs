@@ -138,7 +138,7 @@ cstats = do
 
     where stat cards = let t = 2 * (size cards) - (size $ cards @= Legendary)
                            m = sum $ count <$> toList cards in
-                       T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.right 2 '0' (div (100 * m) t))
+                       T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.left 3 ' ' (div (100 * m) t))
           cDust :: Card -> Float
           cDust c = (realToFrac $ fromEnum (cardQuantity c)) * (craftValue $ cardRarity c)
           mDust :: Card -> Float
