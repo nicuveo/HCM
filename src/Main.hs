@@ -240,7 +240,7 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     missing    cards not in collection\
 \\n     standard   cards that can be used in standard mode\
 \\n\
-\\n     filter values can accept a list of values: r=Epic,Legendary\
+\\n     filters also accept a list of values: r=Epic,Legendary\
 \\n\
 \\nsets:\
 \\n     cla        Classic\
