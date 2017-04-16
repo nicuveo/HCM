@@ -1,31 +1,30 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 
 
 -- module
 
-module Card (
-    CardSet(..),
-    CardClass(..),
-    CardCost(..),
-    CardId(..),
-    CardRarity(..),
-    CardName(..),
-    CardQuantity(..),
-    Card(..),
-    cardSets,
-    cardStandardSets,
-    cardClasses,
-    cardRarities,
-    isStandard,
-    isLegendary,
-    incrQuantity,
-    decrQuantity,
-    setQuantity,
-    ) where
+module Card ( CardSet(..)
+            , CardClass(..)
+            , CardCost(..)
+            , CardId(..)
+            , CardRarity(..)
+            , CardName(..)
+            , CardQuantity(..)
+            , Card(..)
+            , cardSets
+            , cardStandardSets
+            , cardClasses
+            , cardRarities
+            , isStandard
+            , isLegendary
+            , incrQuantity
+            , decrQuantity
+            , setQuantity
+            ) where
 
 
 
@@ -36,13 +35,13 @@ import           Control.Arrow
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Function
-import           Data.List            (stripPrefix)
+import           Data.List           (stripPrefix)
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Text            (pack, unpack)
+import           Data.Text           (pack, unpack)
 import           Data.Typeable
-import qualified Data.Vector          as V
-import           Text.Read            (readMaybe)
+import qualified Data.Vector         as V
+import           Text.Read           (readMaybe)
 
 
 

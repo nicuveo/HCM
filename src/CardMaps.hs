@@ -1,22 +1,29 @@
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 
 
 -- module
 
-module CardMaps where
+module CardMaps ( CardMap
+                , QuantityMap
+                , findByName
+                , updateQuantity
+                , dumpQuantity
+                , missingQuantity
+                ) where
 
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Aeson
 import           Data.Aeson.Types
-import           Data.ByteString.Lazy hiding (head, concat, map, pack, unpack)
+import           Data.ByteString.Lazy hiding (concat, head, map, pack, unpack)
 import qualified Data.Map             as M
 import           Data.Maybe
 import qualified Data.Vector          as V
 
-import Card
+import           Card
 
 type IdMap a     = M.Map CardId a
 type CardMap     = IdMap Card

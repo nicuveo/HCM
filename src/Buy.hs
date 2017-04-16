@@ -1,17 +1,16 @@
 -- module
 
-module Buy (
-    packValue,
-    craftValue,
-    disenchantValue
-    ) where
+module Buy ( packValue
+           , craftValue
+           , disenchantValue
+           ) where
 
 
 
 -- imports
 
 import           Control.Applicative
-import qualified Data.Map as M
+import qualified Data.Map            as M
 
 import           Card
 import           CardMaps

@@ -1,10 +1,12 @@
+-- module
+
 module Log (logInfo, logError) where
 
 
 
 -- imports
 
-import Control.Monad.IO.Class
+import           Control.Monad.IO.Class
 
 
 

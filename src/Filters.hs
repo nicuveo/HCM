@@ -1,16 +1,29 @@
-{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FlexibleInstances #-}
+
+
+
+-- module
 
 module Filters where
 
-import qualified Data.Map             as M
+
+
+-- imports
+
+import qualified Data.Map as M
 
 import           Card
 import           CardMaps
+
+
+
+-- types
 
 type Predicate = Card -> Bool
 
 class PredicateGen a where
   genPred :: a -> Predicate
+
 
 instance PredicateGen CardId      where genPred x = (x ==) . cardId
 instance PredicateGen CardSet     where genPred x = (x ==) . cardSet
@@ -31,6 +44,9 @@ instance {-# OVERLAPPING #-} Monoid Predicate where
     mempty = const True
     mappend p1 p2 c = p1 c && p2 c
 
+
+
+-- functions
 
 (@=) :: PredicateGen a => CardMap -> a -> CardMap
 (@=) = flip keep

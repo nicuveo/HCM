@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 
 
@@ -34,8 +35,8 @@ import           Card
 import           CardMaps
 import           Filters
 import           Log
-import           Persistence
 import           Migrate
+import           Persistence
 
 
 

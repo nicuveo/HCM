@@ -6,7 +6,11 @@
 
 -- module
 
-module Persistence (getFilePath, loadCardMap, loadQuantityMap, saveQuantityMap) where
+module Persistence ( getFilePath
+                   , loadCardMap
+                   , loadQuantityMap
+                   , saveQuantityMap
+                   ) where
 
 
 

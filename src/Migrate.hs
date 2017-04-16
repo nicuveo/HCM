@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 
 
@@ -18,9 +18,9 @@ import qualified Data.Vector          as V
 import           System.Directory
 import           System.FilePath
 
-import CardMaps
-import Log
-import Persistence
+import           CardMaps
+import           Log
+import           Persistence
 
 
 
