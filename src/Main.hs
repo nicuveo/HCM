@@ -248,7 +248,7 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     gvg        Goblins VS Gnomes\
 \\n     tgt        The Grand Tournament\
 \\n     wog        Whisper of the Old Gods\
-\\n     msg        Gangs of Gadgetzan\
+\\n     msg        Mean Streets of Gadgetzan\
 \\n     ung        Journey to Un'Goro"
 
 main :: IO ()
