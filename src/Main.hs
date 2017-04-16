@@ -101,7 +101,7 @@ inputCardsQuantity :: [CardId] -> CardMap -> IO CardMap
 inputCardsQuantity cids cmap = do
     putStrLn "Please input your collection card by card."
     putStrLn "Expected values: 0, 1, 2."
-    fold (inputCardQuantity <$> cids) cmap
+    foldl1' (>=>) (inputCardQuantity <$> cids) cmap
 
 readPredicate :: MonadError String m => [String] -> m Predicate
 readPredicate = either throwError return . fmap fold . mapM readPred
