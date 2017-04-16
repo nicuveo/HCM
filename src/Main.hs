@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns      #-}
 
@@ -6,16 +7,20 @@
 -- imports
 
 import           Control.Applicative
-import           Control.Monad.Except
+import           Control.Monad.Except  hiding (fix)
 import qualified Data.ByteString.Lazy  as B
-import           Data.IxSet            as S
-import           Data.List             as L (foldl', maximumBy, sort,
-                                             stripPrefix)
+import           Data.Foldable
+import           Data.List             as L
+import           Data.List.Split       as L
+import qualified Data.Map              as M
+import           Data.Maybe
 import qualified Data.Text.Format      as T
 import qualified Data.Text.Lazy        as T
 import qualified Data.Text.Lazy.IO     as T
+import           Data.Typeable
 import           Network.HTTP.Simple   hiding (Proxy)
 import           Network.URL
+import           Safe
 import           System.Console.ANSI
 import           System.Console.GetOpt
 import           System.Environment
@@ -26,99 +31,125 @@ import           Text.Tabular.AsciiArt
 
 import           Buy
 import           Card
+import           CardMaps
+import           Filters
+import           Log
 import           Persistence
+import           Migrate
 
 
 
 -- config
 
-cardsURL  = "https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json"
-cardsFile = "cards.json"
-appName   = "hcm"
+cardsURL     = "https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json"
+cardsFile    = "cards.collectible.json"
+quantityFile = "quantity.v0.json"
+appName      = "hcm"
 
 
 
 -- helpers
 
-run :: ExceptT String IO a -> IO a
-run = runExceptT >=> either fail return
+run :: MonadIO m => ExceptT String m a -> m a
+run = runExceptT >=> either (liftIO . exit) return
 
-refCards :: IO Cards
-refCards = do
-    cardsJson <- httpLBS cardsURL
-    run $ readCardsRefM $ getResponseBody cardsJson
+exit :: MonadIO m => String -> m a
+exit s = logError s >> liftIO exitFailure
 
-load :: IO (Maybe Cards)
-load = run $ loadCards cardsFile appName
+load :: MonadIO m => m (Maybe CardMap)
+load = run $ do
+    cs <- loadCardMap     appName cardsFile
+    qs <- loadQuantityMap appName quantityFile
+    return $ updateQuantity <$> qs <*> cs
 
-save :: Cards -> IO ()
-save = run . saveCards cardsFile appName
+loadOrDie :: MonadIO m => m CardMap
+loadOrDie = load >>= maybe (exit "card collection not found, please update") return
 
-updateCards :: Cards -> Maybe Cards -> Cards
-updateCards rc = maybe rc (`S.intersection` rc)
+save :: MonadIO m => CardMap -> m ()
+save = saveQuantityMap appName quantityFile . dumpQuantity
 
-exit :: String -> IO a
-exit s = putStrLn s >> exitFailure
+adjustCardByName :: MonadError String m => (Card -> Card) -> CardName -> CardMap -> m CardMap
+adjustCardByName f cname cmap = do
+    cid <- findByName cmap cname
+    return $ M.adjust f cid cmap
 
-loadForSure :: IO Cards
-loadForSure = load >>= maybe (exit "No card collection found, please update.") return
+inputCardQuantity :: CardId -> CardMap -> IO CardMap
+inputCardQuantity cid cmap = do
+    newq <- ask
+    let newm = M.adjust (setQuantity newq) cid cmap
+    save newm
+    return newm
+    where ask = do
+                let card = cmap M.! cid
+                    ccq = fromMaybe Zero $ cardQuantity card
+                T.putStr $ T.format "How many of {} {}M {} card {}? [{}] " (show $ cardClass    card,
+                                                                            show $ cardCost     card,
+                                                                            show $ cardRarity   card,
+                                                                            show $ cardName     card,
+                                                                            show $ ccq)
+                hFlush stdout
+                answer <- getLine
+                case answer of
+                    ""  -> return ccq
+                    "0" -> return Zero
+                    "1" -> return One
+                    "2" -> return Many
+                    _   -> ask
 
-incr :: CardQuantity -> CardQuantity
-incr Zero = One
-incr One  = Many
-incr Many = Many
+inputCardsQuantity :: [CardId] -> CardMap -> IO CardMap
+inputCardsQuantity cids cmap = do
+    putStrLn "Please input your collection card by card."
+    putStrLn "Expected values: 0, 1, 2."
+    fold (inputCardQuantity <$> cids) cmap
 
-decr :: CardQuantity -> CardQuantity
-decr Zero = Zero
-decr One  = Zero
-decr Many = One
-
-updateQuantity :: (CardQuantity -> CardQuantity) -> CardName -> Cards -> IO Cards
-updateQuantity func name set = case getOne $ set @= name of
-    Nothing -> exit $ "No card named " ++ (getCardName name) ++ "."
-    Just c  -> let newQuantity = func $ cardQuantity c
-                   newCard = c { cardQuantity = newQuantity } in
-               return $ updateIx name newCard set
-
-mkFilters :: [String] -> Cards -> IO Cards
-mkFilters fs = L.foldl' (>=>) return $ mkFilter <$> fs
-    where mkFilter (stripPrefix "h=" -> Just f) = return . (@= (read f :: CardClass))
-          mkFilter (stripPrefix "r=" -> Just f) = return . (@= (read f :: CardRarity))
-          mkFilter (stripPrefix "c=" -> Just f) = return . (@= (CardCost $ read f))
-          mkFilter "q=0"                        = return . (@= Zero)
-          mkFilter "q=1"                        = return . (@= One)
-          mkFilter "q=2"                        = return . (@= Many)
-          mkFilter "s=c"                        = return . (@= Classic)
-          mkFilter "s=gvg"                      = return . (@= GoblinsVsGnomes)
-          mkFilter "s=tgt"                      = return . (@= GrandTournament)
-          mkFilter "s=wog"                      = return . (@= WhispersOldGods)
-          mkFilter "s=gad"                      = return . (@= GangsOfGadgetzan)
-          mkFilter "owned"                      = return . (@+ [One, Many])
-          mkFilter "missing"                    = return . (@+ [One, Zero])
-          mkFilter f                            = const $ exit $ "unknown filter " ++ f
+readPredicate :: MonadError String m => [String] -> m Predicate
+readPredicate = either throwError return . fmap fold . mapM readPred
+    where readPred (stripPrefix "h=" -> Just fs) = fs `parsedWith` re (undefined :: CardClass)
+          readPred (stripPrefix "r=" -> Just fs) = fs `parsedWith` re (undefined :: CardRarity)
+          readPred (stripPrefix "c=" -> Just fs) = fs `parsedWith` re (undefined :: CardCost)
+          readPred (stripPrefix "q=" -> Just fs) = fs `parsedWith` ro
+          readPred (stripPrefix "s=" -> Just fs) = fs `parsedWith` rs
+          readPred "standard"                    = Right standard
+          readPred "missing"                     = Right missing
+          readPred "owned"                       = Right owned
+          readPred f                             = Left $ f ++ " is not a valid filter"
+          parsedWith fs t = fmap genPred $ mapM t $ splitOn "," fs
+          re :: (Read a, Typeable a) => a -> String -> Either String a
+          re p s = maybe (Left $ s ++ " is not a valid " ++ show (typeOf p)) Right $ readMay s
+          ro :: String -> Either String CardQuantity
+          ro = re (undefined :: Int) >=> maybe (Left "quantity must be in [0..2]") Right . toEnumMay
+          rs "cla" = Right Classic
+          rs "hof" = Right HallOfFame
+          rs "gvg" = Right GoblinsVsGnomes
+          rs "tgt" = Right GrandTournament
+          rs "wog" = Right WhispersOldGods
+          rs "msg" = Right GangsOfGadgetzan
+          rs "ung" = Right JourneyToUngoro
+          rs s     = Left $ s ++ " is not a valid set"
 
 
 
--- main
+-- commands
 
-update :: IO ()
-update = do
-    ref  <- refCards
-    mine <- load
-    save $ updateCards ref mine
+names :: IO ()
+names = mapM_ print . sort . fmap cardName . M.elems =<< loadOrDie
 
-add :: CardName -> IO ()
-add name = loadForSure >>= updateQuantity incr name >>= save
+list :: [String] -> IO ()
+list fs = do
+    p <- run $ readPredicate fs
+    s <- keep p <$> loadOrDie
+    putStr $ render id id id $ Table
+        (Group SingleLine [Group NoLine $ Header <$> mkHeader s c | c <- cardClasses, not $ M.null $ s @= c])
+        (Group SingleLine $ Header <$> ["Cost", "Set", "Rarity", "Name", "Quantity"])
+        [[show c, show s, show r, show n, maybe "?" show q] | (Card _ s _ c r n q) <- sort $ M.elems s]
+    where mkHeader s c = show c : replicate (M.size (s @= c) - 1) ""
 
-del :: CardName -> IO ()
-del name = loadForSure >>= updateQuantity decr name >>= save
-
-cstats :: IO ()
-cstats = do
-    cards <- loadForSure
+stats :: [CardSet] -> IO ()
+stats sets = do
+    cards <- keep sets <$> loadOrDie
     putStrLn $ render id id id $ Table
         (Group SingleLine [
-            Group NoLine $ Header . show <$> cardSets,
+            Group NoLine $ Header . show <$> sets,
             Group NoLine $ Header . show <$> cardClasses,
             Header "Total"
             ])
@@ -126,108 +157,112 @@ cstats = do
             Group SingleLine $ Header . show <$> cardRarities,
             Header "Total"
             ])
-        ([[stat (cards @= r @= s) | r <- cardRarities] ++ [stat (cards @= s)] | s <- cardSets]    ++
+        ([[stat (cards @= r @= s) | r <- cardRarities] ++ [stat (cards @= s)] | s <- sets]        ++
          [[stat (cards @= r @= c) | r <- cardRarities] ++ [stat (cards @= c)] | c <- cardClasses] ++
-         [[stat (cards @= r)      | r <- cardRarities] ++ [stat (cards)]])
+         [[stat (cards @= r)      | r <- cardRarities] ++ [stat cards]])
 
-    putStrLn $ "Current cards dust value: " ++ (show $ round $ sum $ map cDust $ toList $ cards)
-    putStrLn $ "Missing cards dust value: " ++ (show $ round $ sum $ map mDust $ toList $ cards)
+    putStrLn $ "Current cards dust value: " ++ show (round $ sum $ map cDust $ toList cards)
+    putStrLn $ "Missing cards dust value: " ++ show (round $ sum $ map mDust $ toList cards)
     sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 9 ' ' $ show s,
                                                           T.left 3 ' ' $ show $ round $ packValue s cards)
-              | s <- cardSets]
+              | s <- cardStandardSets]
 
-    where stat cards = let t = 2 * (size cards) - (size $ cards @= Legendary)
+    where stat cards = let t = 2 * M.size cards - (M.size $ cards @= Legendary)
                            m = sum $ count <$> toList cards in
                        T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.left 3 ' ' (div (100 * m) t))
           cDust :: Card -> Float
-          cDust c = (realToFrac $ fromEnum (cardQuantity c)) * (craftValue $ cardRarity c)
+          cDust c = (realToFrac $ fromEnum (fromMaybe Zero $ cardQuantity c)) * craftValue (cardRarity c)
           mDust :: Card -> Float
-          mDust c = case (cardRarity c, cardQuantity c) of
+          mDust c = case (cardRarity c, fromMaybe Zero $ cardQuantity c) of
               (Legendary, Zero) -> v
               (Legendary, _)    -> 0
               (_,         Zero) -> v * 2
               (_,         One)  -> v
               _                 -> 0
               where v = craftValue $ cardRarity c
-          count c = let r = fromEnum $ cardQuantity c in
+          count c = let r = fromEnum $ fromMaybe Zero $ cardQuantity c in
               if cardRarity c == Legendary
                   then min r 1
                   else r
 
+update :: IO ()
+update = do
+    logInfo "downloading card database"
+    path <- getFilePath appName cardsFile
+    httpLBS cardsURL >>= B.writeFile path . getResponseBody
+    migrate appName
+    cards <- loadOrDie
+    let toFix = M.size $ missingQuantity cards
+    when (toFix > 0) $ logInfo $ "there are " ++ show toFix ++ " new cards; run `hcm fix` to update them"
+
+add :: CardName -> IO ()
+add name = run $ loadOrDie >>= adjustCardByName incrQuantity name >>= save
+
+del :: CardName -> IO ()
+del name = run $ loadOrDie >>= adjustCardByName decrQuantity name >>= save
+
 input :: [String] -> IO ()
 input fs = do
-    let byCost = Proxy :: Proxy CardCost
-    origin <- loadForSure
-    cards  <- mkFilters fs origin
-    putStrLn "Please input your collection card by card."
-    putStrLn "Expected values: 0, 1, 2."
-    save . (`S.union` origin) =<< fromList <$> (sequence $ ask <$> (sort $ toList cards))
-    where ask card = do
-              T.putStr $ T.format "How many of {} {}M {} card {}? [{}] " (show $ cardClass card,
-                                                                          show $ cardCost card,
-                                                                          show $ cardRarity card,
-                                                                          show $ cardName card,
-                                                                          show $ cardQuantity card)
-              hFlush stdout
-              answer <- getLine
-              case answer of
-                  ""  -> return $ card
-                  "0" -> return $ card { cardQuantity = Zero }
-                  "1" -> return $ card { cardQuantity = One  }
-                  "2" -> return $ card { cardQuantity = Many }
-                  _   -> ask card
+    p <- run $ readPredicate fs
+    m <- loadOrDie
+    void $ inputCardsQuantity (map cardId $ sort $ M.elems $ m @= p) $ m
 
-list :: [String] -> IO ()
-list fs = do
-    s <- loadForSure >>= mkFilters fs
-    let l = sort $ toList s
-        c = ["Cost", "Set", "Rarity", "Name", "Quantity"]
-    putStr $ render id id id $ Table
-        (Group SingleLine [Group NoLine $ Header <$> mkHeader s c | c <- cardClasses, not $ S.null $ s @= c])
-        (Group SingleLine $ Header <$> c)
-        [[show c, show s, show r, show n, show q] | (Card _ s _ c r n q) <- l]
-    where mkHeader s c = (show c) : (replicate (size (s @= c) - 1) $ "")
+fix :: IO ()
+fix = do
+    m <- loadOrDie
+    void $ inputCardsQuantity (map cardId $ sort $ M.elems $ missingQuantity m) $ m
 
-names :: IO ()
-names = do
-    cards <- loadForSure
-    sequence_ $ print . cardName <$> toAscList byName cards
-    where byName = Proxy :: Proxy CardName
+
+
+-- main
 
 help :: IO ()
-help = do
-  putStrLn "usage: hcs cmd [args]\
+help = putStrLn "usage: hcs cmd [args]\
 \\n\
 \\ncommands:\
 \\n     help                    display this help\
-\\n     add card1 [card2...]    add a card to your collection\
-\\n     del card1 [card2...]    remove a card from your collection\
-\\n     stats                   stats gathered from your collection\
-\\n     update                  update your collection\
-\\n     input [filters...]      input your collection\
 \\n     list  [filters...]      list cards\
+\\n     stats [standard|wild]   stats gathered from your collection (default: wild)\
+\\n     update                  update the local card database\
+\\n     add card1 [card2...]    increase the quantity of a card in your collection\
+\\n     del card1 [card2...]    decrease the quantity of a card in your collection\
+\\n     input [filters...]      prompts you for quantity\
+\\n     fix                     runs input for all new cards\
 \\n\
 \\nfilters:\
-\\n     h=       filter by hero        h=Druid\
-\\n     r=       filter by rarity      r=Epic\
-\\n     c=       filter by cost        c=2\
-\\n     q=       filter by quantity    q=0\
-\\n     s=       filter by set         s=gvg\
-\\n     owned    cards     in collection\
-\\n     missing  cards NOT in collection"
-
-
+\\n     h=         filter by hero        h=Druid\
+\\n     r=         filter by rarity      r=Epic\
+\\n     c=         filter by cost        c=2\
+\\n     q=         filter by quantity    q=0\
+\\n     s=         filter by set         s=gvg\
+\\n     owned      cards     in collection\
+\\n     missing    cards not in collection\
+\\n     standard   cards that can be used in standard mode\
+\\n\
+\\n     filter values can accept a list of values: r=Epic,Legendary\
+\\n\
+\\nsets:\
+\\n     cla        Classic\
+\\n     hof        Hall of Fame\
+\\n     gvg        Goblins VS Gnomes\
+\\n     tgt        The Grand Tournament\
+\\n     wog        Whisper of the Old Gods\
+\\n     msg        Gangs of Gadgetzan\
+\\n     ung        Journey to Un'Goro"
 
 main :: IO ()
 main = do
     args <- getArgs
     case args of
-        ["help"]   -> help
-        ["stats"]  -> cstats
-        ["names"]  -> names
-        ["update"] -> update
-        "list":fs  -> list fs
-        "input":fs -> input fs
-        "add":cs   -> sequence_ $ map (add . CardName) cs
-        "del":cs   -> sequence_ $ map (del . CardName) cs
-        _          -> help >> exitFailure
+        ["help"  ]             -> help
+        ["names" ]             -> names
+        ["update"]             -> update
+        ["fix"   ]             -> fix
+        ["stats" ]             -> stats cardSets
+        ["stats", "standard" ] -> stats cardStandardSets
+        ["stats", "wild" ]     -> stats cardSets
+        "list"   : fs          -> list fs
+        "input"  : fs          -> input fs
+        "add"    : cs          -> mapM_ (add . CardName) cs
+        "del"    : cs          -> mapM_ (del . CardName) cs
+        _                      -> help >> exitFailure

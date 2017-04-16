@@ -11,15 +11,17 @@ module Buy (
 -- imports
 
 import           Control.Applicative
-import           Data.IxSet
+import qualified Data.Map as M
 
 import           Card
+import           CardMaps
+import           Filters
 
 
 
 -- exported functions
 
-packValue :: Fractional a => CardSet -> Cards -> a
+packValue :: Fractional a => CardSet -> CardMap -> a
 packValue s c = 5 * sum [packChance r * rarityValue (c @= s) r | r <- cardRarities]
 
 craftValue :: Fractional a => CardRarity -> a
@@ -44,13 +46,13 @@ packChance Rare      = 0.228
 packChance Epic      = 0.0458
 packChance Legendary = 0.012
 
-rarityValue :: Fractional a => Cards -> CardRarity -> a
+rarityValue :: Fractional a => CardMap -> CardRarity -> a
 rarityValue c r = disenchantValue r * p + craftValue r * (1 - p)
     where p = proba (c @= r) r
 
-proba :: Fractional a => Cards -> CardRarity -> a
+proba :: Fractional a => CardMap -> CardRarity -> a
 proba c r = count r c / total r c
-    where total Legendary c = realToFrac $ 1 * size c
-          total _         c = realToFrac $ 2 * size c
-          count Legendary c = realToFrac $ sum $ min 1 . fromEnum . cardQuantity <$> toList c
-          count _         c = realToFrac $ sum $         fromEnum . cardQuantity <$> toList c
+    where total Legendary c = realToFrac $ 1 * M.size c
+          total _         c = realToFrac $ 2 * M.size c
+          count Legendary c = realToFrac $ sum $ min 1 . maybe 0 fromEnum . cardQuantity <$> M.elems c
+          count _         c = realToFrac $ sum $         maybe 0 fromEnum . cardQuantity <$> M.elems c

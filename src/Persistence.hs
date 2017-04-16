@@ -6,7 +6,7 @@
 
 -- module
 
-module Persistence (loadCards, saveCards) where
+module Persistence (getFilePath, loadCardMap, loadQuantityMap, saveQuantityMap) where
 
 
 
@@ -14,39 +14,46 @@ module Persistence (loadCards, saveCards) where
 
 import           Control.Applicative
 import           Control.Monad.Except
-import           Data.Aeson           (eitherDecode, encode)
+import           Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import           System.Directory
 import           System.FilePath
 
-import           Card
+import           CardMaps
 
 
 
 -- exported functions
 
-loadCards :: (MonadIO m, MonadError String m, Functor m) => FilePath -> String -> m (Maybe Cards)
-loadCards path app = do
-    file   <- liftIO $ getFile path app
-    exists <- liftIO $ doesFileExist file
-    if exists
-        then liftM Just $ decodeM =<< liftIO (B.readFile file)
-        else return Nothing
+getFilePath :: String -> FilePath -> IO FilePath
+getFilePath app path = do
+  dirName <- getAppUserDataDirectory app
+  createDirectoryIfMissing True dirName
+  return $ dirName </> path
 
-saveCards :: (MonadIO m, MonadError e m) => FilePath -> String -> Cards -> m ()
-saveCards path app cards = do
-    file <- liftIO $ getFile path app
-    liftIO $ B.writeFile file $ encode cards
+loadCardMap :: (MonadIO m, MonadError String m, Functor m) => String -> FilePath -> m (Maybe CardMap)
+loadCardMap = loadMap
+
+loadQuantityMap :: (MonadIO m, MonadError String m, Functor m) => String -> FilePath -> m (Maybe QuantityMap)
+loadQuantityMap = loadMap
+
+saveQuantityMap :: MonadIO m => String -> FilePath -> QuantityMap -> m ()
+saveQuantityMap app path cmap = do
+    file <- liftIO $ getFilePath app path
+    liftIO $ B.writeFile file $ encode cmap
+
 
 
 
 -- internal functions
 
-decodeM :: MonadError String m => B.ByteString -> m Cards
-decodeM = either throwError return . eitherDecode
+loadMap :: (MonadIO m, MonadError String m, Functor m, FromJSON a) => String -> FilePath -> m (Maybe a)
+loadMap app path = do
+    file   <- liftIO $ getFilePath app path
+    exists <- liftIO $ doesFileExist file
+    if exists
+        then fmap Just $ decodeM =<< liftIO (B.readFile file)
+        else return Nothing
 
-getFile :: FilePath -> String -> IO FilePath
-getFile path app = do
-  dirName <- getAppUserDataDirectory app
-  createDirectoryIfMissing True dirName
-  return $ dirName </> path
+decodeM :: (MonadError String m, FromJSON a) => B.ByteString -> m a
+decodeM = either throwError return . eitherDecode'
