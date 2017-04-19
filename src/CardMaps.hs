@@ -39,7 +39,7 @@ instance {-# OVERLAPPING #-} FromJSON CardMap where
 
 findByName :: MonadError String m => CardMap -> CardName -> m CardId
 findByName cmap cname = case M.size matches of
-                            1 -> return $ cardId $ head $ M.elems $ matches
+                            1 -> return $ cardId $ head $ M.elems matches
                             0 -> throwError $ "found no card named " ++ getCardName cname
                             _ -> throwError $ "found more than one card named " ++ getCardName cname ++ "!!?"
     where matches = M.filter (\c -> cardName c == cname) cmap

@@ -168,11 +168,11 @@ stats sets = do
                                                           T.left 3 ' ' $ show $ round $ packValue s cards)
               | s <- cardStandardSets]
 
-    where stat cards = let t = 2 * M.size cards - (M.size $ cards @= Legendary)
+    where stat cards = let t = 2 * M.size cards - M.size (cards @= Legendary)
                            m = sum $ count <$> toList cards in
                        T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.left 3 ' ' (div (100 * m) t))
           cDust :: Card -> Float
-          cDust c = (realToFrac $ fromEnum (fromMaybe Zero $ cardQuantity c)) * craftValue (cardRarity c)
+          cDust c = (realToFrac $ maybe 0 fromEnum $ cardQuantity c) * (craftValue $ cardRarity c)
           mDust :: Card -> Float
           mDust c = case (cardRarity c, fromMaybe Zero $ cardQuantity c) of
               (Legendary, Zero) -> v
@@ -206,12 +206,12 @@ input :: [String] -> IO ()
 input fs = do
     p <- run $ readPredicate fs
     m <- loadOrDie
-    void $ inputCardsQuantity (map cardId $ sort $ M.elems $ m @= p) $ m
+    void $ inputCardsQuantity (map cardId $ sort $ M.elems $ m @= p) m
 
 fix :: IO ()
 fix = do
     m <- loadOrDie
-    void $ inputCardsQuantity (map cardId $ sort $ M.elems $ missingQuantity m) $ m
+    void $ inputCardsQuantity (map cardId $ sort $ M.elems $ missingQuantity m) m
 
 
 

@@ -209,7 +209,7 @@ isLegendary :: Card -> Bool
 isLegendary c = cardRarity c == Legendary
 
 isStandard :: CardSet -> Bool
-isStandard s = elem s cardStandardSets
+isStandard s = s `elem` cardStandardSets
 
 incrQuantity :: Card -> Card
 incrQuantity card = card { cardQuantity = incr (cardQuantity card) (cardRarity card) }
