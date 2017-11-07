@@ -126,6 +126,7 @@ readPredicate = either throwError return . fmap fold . mapM readPred
           rs "wog" = Right WhispersOldGods
           rs "msg" = Right GangsOfGadgetzan
           rs "jtu" = Right JourneyToUngoro
+          rs "ktf" = Right KnightsFrozenThrone
           rs s     = Left $ s ++ " is not a valid set"
 
 
@@ -164,8 +165,8 @@ stats sets = do
 
     putStrLn $ "Current cards dust value: " ++ show (round $ sum $ map cDust $ toList cards)
     putStrLn $ "Missing cards dust value: " ++ show (round $ sum $ map mDust $ toList cards)
-    sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 9 ' ' $ show s,
-                                                          T.left 3 ' ' $ show $ round $ packValue s cards)
+    sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 13 ' ' $ show s,
+                                                          T.left 3  ' ' $ show $ round $ packValue s cards)
               | s <- cardStandardSets]
 
     where stat cards = let t = 2 * M.size cards - M.size (cards @= Legendary)
@@ -249,7 +250,8 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     tgt        The Grand Tournament\
 \\n     wog        Whisper of the Old Gods\
 \\n     msg        Mean Streets of Gadgetzan\
-\\n     jtu        Journey to Un'Goro"
+\\n     jtu        Journey to Un'Goro\
+\\n     ktf        Knights of the Frozen Throne"
 
 main :: IO ()
 main = do

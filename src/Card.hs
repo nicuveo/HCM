@@ -54,6 +54,7 @@ data CardSet = Classic
              | WhispersOldGods
              | GangsOfGadgetzan
              | JourneyToUngoro
+             | KnightsFrozenThrone
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -104,13 +105,14 @@ data Card = Card {
 -- instances
 
 instance Show CardSet where
-    show Classic          = "Classic"
-    show HallOfFame       = "Hall of Fame"
-    show GoblinsVsGnomes  = "GvG"
-    show GrandTournament  = "TGT"
-    show WhispersOldGods  = "Old Gods"
-    show GangsOfGadgetzan = "Gadgetzan"
-    show JourneyToUngoro  = "Un'Goro"
+    show Classic             = "Classic"
+    show HallOfFame          = "Hall of Fame"
+    show GoblinsVsGnomes     = "GvG"
+    show GrandTournament     = "TGT"
+    show WhispersOldGods     = "Old Gods"
+    show GangsOfGadgetzan    = "Gadgetzan"
+    show JourneyToUngoro     = "Un'Goro"
+    show KnightsFrozenThrone = "Frozen Throne"
 
 instance Show CardQuantity where
     show Zero = "0"
@@ -131,8 +133,12 @@ instance Eq Card where
     (==) = (==) `on` cardId
 
 instance Ord Card where
-    compare (Card i1 _ h1 c1 _ _ _) (Card i2 _ h2 c2 _ _ _) =
-        compare (h1, c1, i1) (h2, c2, i2)
+    compare = compare `on` extract
+      where extract card = ( cardClass  card
+                           , cardCost   card
+                           , cardRarity card
+                           , cardId     card
+                           )
 
 
 instance FromJSON CardClass where
@@ -158,15 +164,16 @@ instance FromJSON CardRarity where
     parseJSON v          = typeMismatch "CardRarity" v
 
 instance FromJSON CardSet where
-    parseJSON (String "EXPERT1") = return Classic
-    parseJSON (String "HOF"    ) = return HallOfFame
-    parseJSON (String "GVG"    ) = return GoblinsVsGnomes
-    parseJSON (String "TGT"    ) = return GrandTournament
-    parseJSON (String "OG"     ) = return WhispersOldGods
-    parseJSON (String "GANGS"  ) = return GangsOfGadgetzan
-    parseJSON (String "UNGORO" ) = return JourneyToUngoro
-    parseJSON (String s)         = expecting    "CardSet" s
-    parseJSON v                  = typeMismatch "CardSet" v
+    parseJSON (String "EXPERT1" ) = return Classic
+    parseJSON (String "HOF"     ) = return HallOfFame
+    parseJSON (String "GVG"     ) = return GoblinsVsGnomes
+    parseJSON (String "TGT"     ) = return GrandTournament
+    parseJSON (String "OG"      ) = return WhispersOldGods
+    parseJSON (String "GANGS"   ) = return GangsOfGadgetzan
+    parseJSON (String "UNGORO"  ) = return JourneyToUngoro
+    parseJSON (String "ICECROWN") = return KnightsFrozenThrone
+    parseJSON (String s)          = expecting    "CardSet" s
+    parseJSON v                   = typeMismatch "CardSet" v
 
 instance FromJSON CardQuantity where
     parseJSON = fmap toEnum . parseJSON
@@ -197,7 +204,7 @@ cardSets :: [CardSet]
 cardSets = [minBound..maxBound]
 
 cardStandardSets :: [CardSet]
-cardStandardSets = [Classic, WhispersOldGods, GangsOfGadgetzan, JourneyToUngoro]
+cardStandardSets = [Classic, WhispersOldGods, GangsOfGadgetzan, JourneyToUngoro, KnightsFrozenThrone]
 
 cardClasses :: [CardClass]
 cardClasses = [minBound..maxBound]
