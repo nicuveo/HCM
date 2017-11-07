@@ -84,7 +84,7 @@ newtype CardName = CardName { getCardName :: String }
                  deriving (Eq, Ord, FromJSON)
 
 newtype CardCost = CardCost { getCardCost :: Int }
-                 deriving (Read, Eq, Ord, FromJSON, Typeable)
+                 deriving (Eq, Ord, FromJSON, Typeable)
 
 newtype CardId = CardId { getCardId :: String }
                deriving (Eq, Ord, FromJSON, ToJSON, FromJSONKey, ToJSONKey)
@@ -127,6 +127,10 @@ instance Show CardName where
 
 instance Show CardCost where
     show = show . getCardCost
+
+
+instance Read CardCost where
+    readsPrec x s = [(CardCost i, z) | (i, z) <- readsPrec x s]
 
 
 instance Eq Card where
