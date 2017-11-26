@@ -163,8 +163,9 @@ stats sets = do
          [[stat (cards @= r @= c) | r <- cardRarities] ++ [stat (cards @= c)] | c <- cardClasses] ++
          [[stat (cards @= r)      | r <- cardRarities] ++ [stat cards]])
 
-    putStrLn $ "Current cards dust value: " ++ show (round $ sum $ map cDust $ toList cards)
-    putStrLn $ "Missing cards dust value: " ++ show (round $ sum $ map mDust $ toList cards)
+    putStrLn $ "    All cards dust value: " ++ show (sum $ map aDust $ toList cards)
+    putStrLn $ "Current cards dust value: " ++ show (sum $ map cDust $ toList cards)
+    putStrLn $ "Missing cards dust value: " ++ show (sum $ map mDust $ toList cards)
     sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 13 ' ' $ show s,
                                                           T.left 3  ' ' $ show $ round $ packValue s cards)
               | s <- cardStandardSets]
@@ -172,16 +173,9 @@ stats sets = do
     where stat cards = let t = 2 * M.size cards - M.size (cards @= Legendary)
                            m = sum $ count <$> toList cards in
                        T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.left 3 ' ' (div (100 * m) t))
-          cDust :: Card -> Float
-          cDust c = (realToFrac $ maybe 0 fromEnum $ cardQuantity c) * (craftValue $ cardRarity c)
-          mDust :: Card -> Float
-          mDust c = case (cardRarity c, fromMaybe Zero $ cardQuantity c) of
-              (Legendary, Zero) -> v
-              (Legendary, _)    -> 0
-              (_,         Zero) -> v * 2
-              (_,         One)  -> v
-              _                 -> 0
-              where v = craftValue $ cardRarity c
+          aDust c = (if cardRarity c == Legendary then 1 else 2) * (round $ craftValue $ cardRarity c)
+          cDust c = (maybe 0 fromEnum $ cardQuantity c) * (round $ craftValue $ cardRarity c)
+          mDust c = aDust c - cDust c
           count c = let r = fromEnum $ fromMaybe Zero $ cardQuantity c in
               if cardRarity c == Legendary
                   then min r 1
