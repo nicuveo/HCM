@@ -16,7 +16,6 @@ module Persistence ( getFilePath
 
 -- imports
 
-import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as B

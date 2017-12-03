@@ -7,7 +7,6 @@
 
 -- imports
 
-import           Control.Applicative
 import           Control.Monad.Except  hiding (fix)
 import qualified Data.ByteString.Lazy  as B
 import           Data.Foldable
@@ -20,10 +19,7 @@ import qualified Data.Text.Lazy        as T
 import qualified Data.Text.Lazy.IO     as T
 import           Data.Typeable
 import           Network.HTTP.Simple   hiding (Proxy)
-import           Network.URL
 import           Safe
-import           System.Console.ANSI
-import           System.Console.GetOpt
 import           System.Environment
 import           System.Exit
 import           System.IO
@@ -173,8 +169,8 @@ stats sets = do
     where stat cards = let t = 2 * M.size cards - M.size (cards @= Legendary)
                            m = sum $ count <$> toList cards in
                        T.unpack $ T.format "{} / {} ({}%)" (T.left 3 ' ' m, T.left 3 ' ' t, T.left 3 ' ' (div (100 * m) t))
-          aDust c = (if cardRarity c == Legendary then 1 else 2) * (round $ craftValue $ cardRarity c)
-          cDust c = (maybe 0 fromEnum $ cardQuantity c) * (round $ craftValue $ cardRarity c)
+          aDust c = (if cardRarity c == Legendary then 1 else 2) * round (craftValue $ cardRarity c)
+          cDust c = maybe 0 fromEnum (cardQuantity c) * round (craftValue $ cardRarity c)
           mDust c = aDust c - cDust c
           count c = let r = fromEnum $ fromMaybe Zero $ cardQuantity c in
               if cardRarity c == Legendary

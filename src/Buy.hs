@@ -9,7 +9,6 @@ module Buy ( packValue
 
 -- imports
 
-import           Control.Applicative
 import qualified Data.Map            as M
 
 import           Card
@@ -50,7 +49,7 @@ rarityValue c r = disenchantValue r * p + craftValue r * (1 - p)
     where p = proba (c @= r) r
 
 proba :: Fractional a => CardMap -> CardRarity -> a
-proba c r = count r c / total r c
+proba cm r = count r cm / total r cm
     where total Legendary c = realToFrac $ 1 * M.size c
           total _         c = realToFrac $ 2 * M.size c
           count Legendary c = realToFrac $ sum $ min 1 . maybe 0 fromEnum . cardQuantity <$> M.elems c

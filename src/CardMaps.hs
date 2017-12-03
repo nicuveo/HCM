@@ -14,11 +14,8 @@ module CardMaps ( CardMap
                 , missingQuantity
                 ) where
 
-import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Aeson
-import           Data.Aeson.Types
-import           Data.ByteString.Lazy hiding (concat, head, map, pack, unpack)
 import qualified Data.Map             as M
 import           Data.Maybe
 import qualified Data.Vector          as V
@@ -46,7 +43,7 @@ findByName cmap cname = case M.size matches of
 
 updateQuantity :: QuantityMap -> CardMap -> CardMap
 updateQuantity qs cs = M.foldlWithKey' combine cs qs
-    where combine cs id q = M.adjust (setQuantity q) id cs
+    where combine c i q = M.adjust (setQuantity q) i c
 
 dumpQuantity :: CardMap -> QuantityMap
 dumpQuantity = M.mapMaybe cardQuantity
@@ -61,6 +58,3 @@ missingQuantity = M.filter $ isNothing . cardQuantity
 insertCard :: CardMap -> Maybe Card -> CardMap
 insertCard m (Just c) = M.insert (cardId c) c m
 insertCard m Nothing  = m
-
-insertQuantity :: QuantityMap -> (CardId, CardQuantity) -> QuantityMap
-insertQuantity m (i,q) = M.insert i q m
