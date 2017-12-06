@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 
 
 
@@ -35,7 +34,9 @@ getFilePath app path = do
   return $ dirName </> path
 
 loadCardMap :: (MonadIO m, MonadError String m, Functor m) => String -> FilePath -> m (Maybe CardMap)
-loadCardMap = loadMap
+loadCardMap app path = do
+  maybeWrapper <- loadMap app path
+  return $ fmap getCardMap maybeWrapper
 
 loadQuantityMap :: (MonadIO m, MonadError String m, Functor m) => String -> FilePath -> m (Maybe QuantityMap)
 loadQuantityMap = loadMap

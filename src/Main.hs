@@ -14,11 +14,13 @@ import           Data.List             as L
 import           Data.List.Split       as L
 import qualified Data.Map              as M
 import           Data.Maybe
+import           Data.String
 import qualified Data.Text.Format      as T
 import qualified Data.Text.Lazy        as T
 import qualified Data.Text.Lazy.IO     as T
 import           Data.Typeable
 import           Network.HTTP.Simple   hiding (Proxy)
+import           Prelude               hiding (pred)
 import           Safe
 import           System.Environment
 import           System.Exit
@@ -38,6 +40,7 @@ import           Persistence
 
 -- config
 
+cardsURL, cardsFile, quantityFile, appName :: IsString a => a
 cardsURL     = "https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json"
 cardsFile    = "cards.collectible.json"
 quantityFile = "quantity.v0.json"
@@ -100,8 +103,11 @@ inputCardsQuantity cids cmap = do
     foldl1' (>=>) (inputCardQuantity <$> cids) cmap
 
 readPredicate :: MonadError String m => [String] -> m Predicate
-readPredicate = either throwError return . fmap fold . mapM readPred
-    where readPred (stripPrefix "h=" -> Just fs) = fs `parsedWith` re (undefined :: CardClass)
+readPredicate = either throwError return . fmap foldPred . mapM readPred
+    where foldPred = foldl' combinePred emptyPred
+          emptyPred = const True
+          combinePred p1 p2 c = p1 c && p2 c
+          readPred (stripPrefix "h=" -> Just fs) = fs `parsedWith` re (undefined :: CardClass)
           readPred (stripPrefix "r=" -> Just fs) = fs `parsedWith` re (undefined :: CardRarity)
           readPred (stripPrefix "c=" -> Just fs) = fs `parsedWith` re (undefined :: CardCost)
           readPred (stripPrefix "q=" -> Just fs) = fs `parsedWith` ro
@@ -134,13 +140,13 @@ names = mapM_ print . sort . fmap cardName . M.elems =<< loadOrDie
 
 list :: [String] -> IO ()
 list fs = do
-    p <- run $ readPredicate fs
-    s <- keep p <$> loadOrDie
+    pred  <- run $ readPredicate fs
+    cards <- keep pred <$> loadOrDie
     putStr $ render id id id $ Table
-        (Group SingleLine [Group NoLine $ Header <$> mkHeader s c | c <- cardClasses, not $ M.null $ s @= c])
+        (Group SingleLine [Group NoLine $ Header <$> mkHeader cards c | c <- cardClasses, not $ M.null $ cards @= c])
         (Group SingleLine $ Header <$> ["Cost", "Set", "Rarity", "Name", "Quantity"])
-        [[show c, show s, show r, show n, maybe "?" show q] | (Card _ s _ c r n q) <- sort $ M.elems s]
-    where mkHeader s c = show c : replicate (M.size (s @= c) - 1) ""
+        [[show c, show s, show r, show n, maybe "?" show q] | (Card _ s _ c r n q) <- sort $ M.elems cards]
+    where mkHeader cards c = show c : replicate (M.size (cards @= c) - 1) ""
 
 stats :: [CardSet] -> IO ()
 stats sets = do

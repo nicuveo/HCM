@@ -7,6 +7,7 @@
 -- module
 
 module CardMaps ( CardMap
+                , CardMapW(..)
                 , QuantityMap
                 , findByName
                 , updateQuantity
@@ -22,27 +23,38 @@ import qualified Data.Vector          as V
 
 import           Card
 
+
+
+-- exported types
+
 type IdMap a     = M.Map CardId a
 type CardMap     = IdMap Card
 type QuantityMap = IdMap CardQuantity
 
-instance {-# OVERLAPPING #-} FromJSON CardMap where
-    parseJSON = withArray "CardMap" $
-                fmap (V.foldl' insertCard M.empty) . sequence . fmap parseJSON
+newtype CardMapW = CardMapW { getCardMap :: CardMap }
+
+
+
+-- instances
+
+instance FromJSON CardMapW where
+  parseJSON = withArray "CardMap" $
+              fmap (CardMapW . V.foldl' insertCard M.empty) . traverse parseJSON
 
 
 
 -- exported functions
 
 findByName :: MonadError String m => CardMap -> CardName -> m CardId
-findByName cmap cname = case M.size matches of
-                            1 -> return $ cardId $ head $ M.elems matches
-                            0 -> throwError $ "found no card named " ++ getCardName cname
-                            _ -> throwError $ "found more than one card named " ++ getCardName cname ++ "!!?"
-    where matches = M.filter (\c -> cardName c == cname) cmap
+findByName cmap cname =
+  case M.size matches of
+    1 -> return $ cardId $ head $ M.elems matches
+    0 -> throwError $ "found no card named " ++ getCardName cname
+    _ -> throwError $ "found more than one card named " ++ getCardName cname ++ "!!?"
+  where matches = M.filter (\c -> cardName c == cname) cmap
 
 updateQuantity :: QuantityMap -> CardMap -> CardMap
-updateQuantity qs cs = M.foldlWithKey' combine cs qs
+updateQuantity = flip $ M.foldlWithKey' combine
     where combine c i q = M.adjust (setQuantity q) i c
 
 dumpQuantity :: CardMap -> QuantityMap
@@ -56,5 +68,5 @@ missingQuantity = M.filter $ isNothing . cardQuantity
 -- internal functions
 
 insertCard :: CardMap -> Maybe Card -> CardMap
-insertCard m (Just c) = M.insert (cardId c) c m
-insertCard m Nothing  = m
+insertCard cm (Just c) = M.insert (cardId c) c cm
+insertCard cm _        = cm

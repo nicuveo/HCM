@@ -40,11 +40,6 @@ instance PredicateGen a => PredicateGen [a] where
     genPred xs c = or [genPred x c | x <- xs]
 
 
-instance {-# OVERLAPPING #-} Monoid Predicate where
-    mempty = const True
-    mappend p1 p2 c = p1 c && p2 c
-
-
 
 -- functions
 
