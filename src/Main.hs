@@ -129,6 +129,7 @@ readPredicate = either throwError return . fmap foldPred . mapM readPred
           rs "msg" = Right GangsOfGadgetzan
           rs "jtu" = Right JourneyToUngoro
           rs "ktf" = Right KnightsFrozenThrone
+          rs "kac" = Right KoboldsAndCatacombs
           rs s     = Left $ s ++ " is not a valid set"
 
 
@@ -247,7 +248,8 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     wog        Whisper of the Old Gods\
 \\n     msg        Mean Streets of Gadgetzan\
 \\n     jtu        Journey to Un'Goro\
-\\n     ktf        Knights of the Frozen Throne"
+\\n     ktf        Knights of the Frozen Throne\
+\\n     kac        Kobolds and Catacombs"
 
 main :: IO ()
 main = do

@@ -47,6 +47,7 @@ data CardSet = Classic
              | GangsOfGadgetzan
              | JourneyToUngoro
              | KnightsFrozenThrone
+             | KoboldsAndCatacombs
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -105,6 +106,7 @@ instance Show CardSet where
     show GangsOfGadgetzan    = "Gadgetzan"
     show JourneyToUngoro     = "Un'Goro"
     show KnightsFrozenThrone = "Frozen Throne"
+    show KoboldsAndCatacombs = "Kobolds"
 
 instance Show CardQuantity where
     show Zero = "0"
@@ -160,16 +162,17 @@ instance FromJSON CardRarity where
     parseJSON v          = typeMismatch "CardRarity" v
 
 instance FromJSON CardSet where
-    parseJSON (String "EXPERT1" ) = return Classic
-    parseJSON (String "HOF"     ) = return HallOfFame
-    parseJSON (String "GVG"     ) = return GoblinsVsGnomes
-    parseJSON (String "TGT"     ) = return GrandTournament
-    parseJSON (String "OG"      ) = return WhispersOldGods
-    parseJSON (String "GANGS"   ) = return GangsOfGadgetzan
-    parseJSON (String "UNGORO"  ) = return JourneyToUngoro
-    parseJSON (String "ICECROWN") = return KnightsFrozenThrone
-    parseJSON (String s)          = expecting    "CardSet" s
-    parseJSON v                   = typeMismatch "CardSet" v
+    parseJSON (String "EXPERT1"     ) = return Classic
+    parseJSON (String "HOF"         ) = return HallOfFame
+    parseJSON (String "GVG"         ) = return GoblinsVsGnomes
+    parseJSON (String "TGT"         ) = return GrandTournament
+    parseJSON (String "OG"          ) = return WhispersOldGods
+    parseJSON (String "GANGS"       ) = return GangsOfGadgetzan
+    parseJSON (String "UNGORO"      ) = return JourneyToUngoro
+    parseJSON (String "ICECROWN"    ) = return KnightsFrozenThrone
+    parseJSON (String "LOOTAPALOOZA") = return KoboldsAndCatacombs
+    parseJSON (String s)              = expecting    "CardSet" s
+    parseJSON v                       = typeMismatch "CardSet" v
 
 instance FromJSON CardQuantity where
     parseJSON = fmap toEnum . parseJSON
@@ -200,7 +203,13 @@ cardSets :: [CardSet]
 cardSets = [minBound..maxBound]
 
 cardStandardSets :: [CardSet]
-cardStandardSets = [Classic, WhispersOldGods, GangsOfGadgetzan, JourneyToUngoro, KnightsFrozenThrone]
+cardStandardSets = [ Classic
+                   , WhispersOldGods
+                   , GangsOfGadgetzan
+                   , JourneyToUngoro
+                   , KnightsFrozenThrone
+                   , KoboldsAndCatacombs
+                   ]
 
 cardClasses :: [CardClass]
 cardClasses = [minBound..maxBound]
