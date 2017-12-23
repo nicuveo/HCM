@@ -45,12 +45,14 @@ packChance Epic      = 0.0458
 packChance Legendary = 0.012
 
 rarityValue :: Fractional a => CardMap -> CardRarity -> a
-rarityValue c r = disenchantValue r * p + craftValue r * (1 - p)
-    where p = proba (c @= r) r
+rarityValue cm r = disenchantValue r * p + craftValue r * (1 - p)
+    where p = proba (cm @= r) r
 
 proba :: Fractional a => CardMap -> CardRarity -> a
-proba cm rarity = count rarity cm / total rarity cm
-    where total Legendary c = realToFrac $ 1 * M.size c
-          total _         c = realToFrac $ 2 * M.size c
-          count Legendary c = realToFrac $ sum $ min 1 . maybe 0 fromEnum . cardQuantity <$> M.elems c
-          count _         c = realToFrac $ sum $         maybe 0 fromEnum . cardQuantity <$> M.elems c
+proba cm Legendary =
+  if all (\c -> cardQuantity c > Just Zero) $ M.elems cm
+  then 1
+  else 0
+proba cm _ = count / total
+    where total = realToFrac $ 2 * M.size cm
+          count = realToFrac $ sum $ maybe 0 fromEnum . cardQuantity <$> M.elems cm
