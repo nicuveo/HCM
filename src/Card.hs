@@ -48,6 +48,7 @@ data CardSet = Classic
              | JourneyToUngoro
              | KnightsFrozenThrone
              | KoboldsAndCatacombs
+             | Witchwood
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -107,6 +108,7 @@ instance Show CardSet where
     show JourneyToUngoro     = "Un'Goro"
     show KnightsFrozenThrone = "Frozen Throne"
     show KoboldsAndCatacombs = "Kobolds"
+    show Witchwood           = "Witchwood"
 
 instance Show CardQuantity where
     show Zero = "0"
@@ -171,6 +173,7 @@ instance FromJSON CardSet where
     parseJSON (String "UNGORO"      ) = return JourneyToUngoro
     parseJSON (String "ICECROWN"    ) = return KnightsFrozenThrone
     parseJSON (String "LOOTAPALOOZA") = return KoboldsAndCatacombs
+    parseJSON (String "GILNEAS"     ) = return Witchwood
     parseJSON (String s)              = expecting    "CardSet" s
     parseJSON v                       = typeMismatch "CardSet" v
 
@@ -204,11 +207,10 @@ cardSets = [minBound..maxBound]
 
 cardStandardSets :: [CardSet]
 cardStandardSets = [ Classic
-                   , WhispersOldGods
-                   , GangsOfGadgetzan
                    , JourneyToUngoro
                    , KnightsFrozenThrone
                    , KoboldsAndCatacombs
+                   , Witchwood
                    ]
 
 cardClasses :: [CardClass]
