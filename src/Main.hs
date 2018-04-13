@@ -65,6 +65,12 @@ load = run $ do
 loadOrDie :: MonadIO m => m CardMap
 loadOrDie = load >>= maybe (exit "card collection not found, please update") return
 
+loadOrDieAndCheck :: MonadIO m => m CardMap
+loadOrDieAndCheck = do
+  cards <- loadOrDie
+  liftIO $ check cards
+  return cards
+
 save :: MonadIO m => CardMap -> m ()
 save = saveQuantityMap appName quantityFile . dumpQuantity
 
@@ -143,7 +149,7 @@ names = mapM_ print . sort . fmap cardName . M.elems =<< loadOrDie
 list :: [String] -> IO ()
 list fs = do
     pred  <- run $ readPredicate fs
-    cards <- keep pred <$> loadOrDie
+    cards <- keep pred <$> loadOrDieAndCheck
     putStr $ render id id id $ Table
         (Group SingleLine [Group NoLine $ Header <$> mkHeader cards c | c <- cardClasses, not $ M.null $ cards @= c])
         (Group SingleLine $ Header <$> ["Cost", "Set", "Rarity", "Name", "Quantity"])
@@ -152,7 +158,7 @@ list fs = do
 
 stats :: [CardSet] -> IO ()
 stats sets = do
-    cards <- keep sets <$> loadOrDie
+    cards <- keep sets <$> loadOrDieAndCheck
     putStrLn $ render id id id $ Table
         (Group SingleLine [
             Group NoLine $ Header . show <$> sets,
@@ -196,20 +202,20 @@ update = do
     when (toFix > 0) $ logInfo $ "there are " ++ show toFix ++ " new cards; run `hcm fix` to update them"
 
 add :: CardName -> IO ()
-add name = run $ loadOrDie >>= adjustCardByName incrQuantity name >>= save
+add name = run $ loadOrDieAndCheck >>= adjustCardByName incrQuantity name >>= save
 
 del :: CardName -> IO ()
-del name = run $ loadOrDie >>= adjustCardByName decrQuantity name >>= save
+del name = run $ loadOrDieAndCheck >>= adjustCardByName decrQuantity name >>= save
 
 input :: [String] -> IO ()
 input fs = do
     p <- run $ readPredicate fs
-    m <- loadOrDie
+    m <- loadOrDieAndCheck
     void $ inputCardsQuantity (map cardId $ sort $ M.elems $ m @= p) m
 
 fix :: IO ()
 fix = do
-    m <- loadOrDie
+    m <- loadOrDieAndCheck
     void $ inputCardsQuantity (map cardId $ sort $ M.elems $ missingQuantity m) m
 
 
@@ -252,6 +258,14 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     ktf        Knights of the Frozen Throne\
 \\n     kac        Kobolds and Catacombs\
 \\n     ww         Witchwood"
+
+check :: CardMap -> IO ()
+check cm = do
+  config <- getFilePath appName quantityFile
+  when someEmptySets $ putStrLn ("Your card collection seems outdated.\
+\\nPlease backup your collection file and run `hcm update`.\
+\\nYour collection file is: " ++ config) >> exitFailure
+  where someEmptySets = any null [cm @= set | set <- cardSets]
 
 main :: IO ()
 main = do
