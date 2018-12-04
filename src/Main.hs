@@ -178,7 +178,7 @@ stats sets = do
     putStrLn $ "    All cards dust value: " ++ show (sum $ map aDust $ toList cards)
     putStrLn $ "Current cards dust value: " ++ show (sum $ map cDust $ toList cards)
     putStrLn $ "Missing cards dust value: " ++ show (sum $ map mDust $ toList cards)
-    sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 13 ' ' $ show s,
+    sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 18 ' ' $ show s,
                                                           T.left 3  ' ' $ show $ round $ packValue s cards)
               | s <- cardStandardSets]
 
