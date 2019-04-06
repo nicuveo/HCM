@@ -139,6 +139,7 @@ readPredicate = either throwError return . fmap foldPred . mapM readPred
           rs "ww"  = Right Witchwood
           rs "bd"  = Right Boomsday
           rs "rr"  = Right RastakhansRumble
+          rs "ros" = Right RiseOfShadows
           rs s     = Left $ s ++ " is not a valid set"
 
 
@@ -261,7 +262,8 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     kac        Kobolds and Catacombs\
 \\n     ww         Witchwood\
 \\n     bd         Boomsday\
-\\n     rr         Rastakhan's Rumble"
+\\n     rr         Rastakhan's Rumble\
+\\n     ros        Rise of Shadows"
 
 check :: CardMap -> IO ()
 check cm = do
