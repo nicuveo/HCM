@@ -52,6 +52,7 @@ data CardSet = Classic
              | Boomsday
              | RastakhansRumble
              | RiseOfShadows
+             | SaviorsOfUldum
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -115,6 +116,7 @@ instance Show CardSet where
     show Boomsday            = "Boomsday"
     show RastakhansRumble    = "Rastakhan's Rumble"
     show RiseOfShadows       = "Rise of Shadows"
+    show SaviorsOfUldum      = "Saviors of Uldum"
 
 instance Show CardQuantity where
     show Zero = "0"
@@ -183,6 +185,7 @@ instance FromJSON CardSet where
     parseJSON (String "BOOMSDAY"    ) = return Boomsday
     parseJSON (String "TROLL"       ) = return RastakhansRumble
     parseJSON (String "DALARAN"     ) = return RiseOfShadows
+    parseJSON (String "ULDUM"       ) = return SaviorsOfUldum
     parseJSON (String s)              = expecting    "CardSet" s
     parseJSON v                       = typeMismatch "CardSet" v
 
@@ -220,6 +223,7 @@ cardStandardSets = [ Classic
                    , Boomsday
                    , RastakhansRumble
                    , RiseOfShadows
+                   , SaviorsOfUldum
                    ]
 
 cardClasses :: [CardClass]
