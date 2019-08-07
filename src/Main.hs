@@ -159,6 +159,15 @@ list fs = do
         [[show c, show s, show r, show n, maybe "?" show q] | (Card _ s _ c r n q) <- sort $ M.elems cards]
     where mkHeader cards c = show c : replicate (M.size (cards @= c) - 1) ""
 
+cost :: [String] -> IO ()
+cost fs = do
+    pred  <- run $ readPredicate fs
+    cards <- keep pred <$> loadOrDieAndCheck
+    print $ sum $ map mDust $ toList cards
+    where aDust c = (if cardRarity c == Legendary then 1 else 2) * round (craftValue $ cardRarity c)
+          cDust c = maybe 0 fromEnum (cardQuantity c) * round (craftValue $ cardRarity c)
+          mDust c = aDust c - cDust c
+
 stats :: [CardSet] -> IO ()
 stats sets = do
     cards <- keep sets <$> loadOrDieAndCheck
@@ -231,6 +240,7 @@ help = putStrLn "usage: hcs cmd [args]\
 \\ncommands:\
 \\n     help                    display this help\
 \\n     list  [filters...]      list cards\
+\\n     cost  [filters...]      display dust cost of completing the selected subset\
 \\n     stats [standard|wild]   stats gathered from your collection (default: wild)\
 \\n     update                  update the local card database\
 \\n     add card1 [card2...]    increase the quantity of a card in your collection\
@@ -285,6 +295,7 @@ main = do
         ["stats", "standard" ] -> stats cardStandardSets
         ["stats", "wild" ]     -> stats cardSets
         "list"   : fs          -> list fs
+        "cost"   : fs          -> cost fs
         "input"  : fs          -> input fs
         "add"    : cs          -> mapM_ (add . CardName) cs
         "del"    : cs          -> mapM_ (del . CardName) cs
