@@ -195,9 +195,12 @@ stats sets hs = do
           [[stat (cards @= r @= c) | r <- cardRarities] ++ [stat (cards @= c)] | c <- cardClasses] ++
           [[stat (cards @= r)      | r <- cardRarities] ++ [stat cards]]
         )
-      putStrLn $ "    All cards dust value: " ++ show (sum $ map aDust $ toList cards)
-      putStrLn $ "Current cards dust value: " ++ show (sum $ map cDust $ toList cards)
-      putStrLn $ "Missing cards dust value: " ++ show (sum $ map mDust $ toList cards)
+      let ad = sum $ map aDust $ toList cards
+          cd = sum $ map cDust $ toList cards
+          md = ad - cd
+      putStrLn $ "    All cards dust value: " ++ show ad
+      putStrLn $ "Current cards dust value: " ++ show cd
+      T.putStrLn $ T.format "Missing cards dust value: {} ({}%)" (md, div (100 * md) ad)
       sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 18 ' ' $ show s,
                                                             T.left 3  ' ' $ show $ round $ packValue s cards)
                 | s <- cardStandardSets]
@@ -228,7 +231,6 @@ stats sets hs = do
                                                            )
           aDust c = (if cardRarity c == Legendary then 1 else 2) * round (craftValue $ cardRarity c)
           cDust c = maybe 0 fromEnum (cardQuantity c) * round (craftValue $ cardRarity c)
-          mDust c = aDust c - cDust c
           count c = let r = fromEnum $ fromMaybe Zero $ cardQuantity c in
               if cardRarity c == Legendary
                   then min r 1
