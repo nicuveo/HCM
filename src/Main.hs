@@ -202,9 +202,10 @@ stats sets hs = do
       putStrLn $ "    All cards dust value: " ++ show ad
       putStrLn $ "Current cards dust value: " ++ show cd
       T.putStrLn $ T.format "Missing cards dust value: {} ({}%)" (md, div (100 * md) ad)
-      sequence_ [T.putStrLn $ T.format "{} pack value: {}" (T.left 18 ' ' $ show s,
-                                                            T.left 3  ' ' $ show $ round $ packValue s cards)
-                | s <- cardStandardSets]
+      let buyableSets = reverse $ sort [(round $ packValue s cards, s) | s <- sets \\ [HallOfFame]]
+      sequence_ [ T.putStrLn $ T.format "{} pack value: {}" (T.left 18 ' ' $ show s, T.left 3  ' ' $ show c)
+                | (c,s) <- buyableSets
+                ]
     else forM_ heroes $ \h -> do
       let heroCards = cards @= h
           heroSets = [s | s <- sets, not $ null $ heroCards @= s]
