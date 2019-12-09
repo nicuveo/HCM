@@ -53,6 +53,7 @@ data CardSet = Classic
              | RastakhansRumble
              | RiseOfShadows
              | SaviorsOfUldum
+             | DescentOfDragons
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = Druid
@@ -117,6 +118,7 @@ instance Show CardSet where
     show RastakhansRumble    = "Rastakhan's Rumble"
     show RiseOfShadows       = "Rise of Shadows"
     show SaviorsOfUldum      = "Saviors of Uldum"
+    show DescentOfDragons    = "Descent of Dragons"
 
 instance Show CardQuantity where
     show Zero = "0"
@@ -160,16 +162,16 @@ instance FromJSON CardClass where
     parseJSON (String "WARLOCK") = return Warlock
     parseJSON (String "WARRIOR") = return Warrior
     parseJSON (String "NEUTRAL") = return Neutral
-    parseJSON (String s) = expecting    "CardClass" s
-    parseJSON v          = typeMismatch "CardClass" v
+    parseJSON (String s)         = expecting    "CardClass" s
+    parseJSON v                  = typeMismatch "CardClass" v
 
 instance FromJSON CardRarity where
     parseJSON (String "COMMON"   ) = return Common
     parseJSON (String "RARE"     ) = return Rare
     parseJSON (String "EPIC"     ) = return Epic
     parseJSON (String "LEGENDARY") = return Legendary
-    parseJSON (String s) = expecting    "CardRarity" s
-    parseJSON v          = typeMismatch "CardRarity" v
+    parseJSON (String s)           = expecting    "CardRarity" s
+    parseJSON v                    = typeMismatch "CardRarity" v
 
 instance FromJSON CardSet where
     parseJSON (String "EXPERT1"     ) = return Classic
@@ -186,6 +188,7 @@ instance FromJSON CardSet where
     parseJSON (String "TROLL"       ) = return RastakhansRumble
     parseJSON (String "DALARAN"     ) = return RiseOfShadows
     parseJSON (String "ULDUM"       ) = return SaviorsOfUldum
+    parseJSON (String "DRAGONS"     ) = return DescentOfDragons
     parseJSON (String s)              = expecting    "CardSet" s
     parseJSON v                       = typeMismatch "CardSet" v
 
@@ -224,6 +227,7 @@ cardStandardSets = [ Classic
                    , RastakhansRumble
                    , RiseOfShadows
                    , SaviorsOfUldum
+                   , DescentOfDragons
                    ]
 
 cardClasses :: [CardClass]
@@ -257,11 +261,11 @@ expecting :: (Monad m, Show a) => String -> a -> m b
 expecting t v = fail $ "expecting a " ++ t ++ ", got: " ++ show v
 
 incr :: Maybe CardQuantity -> CardRarity -> Maybe CardQuantity
-incr Nothing     _          = Just One
-incr (Just Zero) _          = Just One
-incr (Just One ) Legendary  = Just One
-incr (Just One ) _          = Just Many
-incr (Just Many) _          = Just Many
+incr Nothing     _         = Just One
+incr (Just Zero) _         = Just One
+incr (Just One ) Legendary = Just One
+incr (Just One ) _         = Just Many
+incr (Just Many) _         = Just Many
 
 decr :: Maybe CardQuantity -> Maybe CardQuantity
 decr (Just Many) = Just One
