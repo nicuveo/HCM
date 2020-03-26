@@ -146,10 +146,10 @@ instance Eq Card where
 
 instance Ord Card where
   compare = compare `on` extract
-    where extract card = ( cardClass  card
-                         , cardCost   card
-                         , cardRarity card
-                         , cardName   card
+    where extract card = ( cardClass card
+                         , cardCost  card
+                         , cardName  card
+                         , cardId    card
                          )
 
 
