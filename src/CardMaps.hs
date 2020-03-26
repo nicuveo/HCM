@@ -38,8 +38,12 @@ newtype CardMapW = CardMapW { getCardMap :: CardMap }
 -- instances
 
 instance FromJSON CardMapW where
-  parseJSON = withArray "CardMap" $
-              fmap (CardMapW . V.foldl' insertCard M.empty) . traverse parseJSON
+  parseJSON = withArray "CardMap" $ return
+                                  . CardMapW
+                                  . V.foldl' insertIfResult M.empty
+                                  . fmap fromJSON
+    where insertIfResult m (Success c) = insertCard c m
+          insertIfResult m (Error   _) = m
 
 
 
@@ -67,6 +71,5 @@ missingQuantity = M.filter $ isNothing . cardQuantity
 
 -- internal functions
 
-insertCard :: CardMap -> Maybe Card -> CardMap
-insertCard cm (Just c) = M.insert (cardId c) c cm
-insertCard cm _        = cm
+insertCard :: Card -> CardMap -> CardMap
+insertCard c cm = M.insert (cardId c) c cm
