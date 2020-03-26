@@ -142,6 +142,7 @@ readPredicate = either throwError return . fmap foldPred . mapM readPred
         rs "ros" = Right RiseOfShadows
         rs "sou" = Right SaviorsOfUldum
         rs "dod" = Right DescentOfDragons
+        rs "aoo" = Right AshesOfOutlands
         rs s     = Left $ s ++ " is not a valid set"
 
 readHeroes :: MonadError String m => [String] -> m [CardClass]
@@ -316,7 +317,8 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     rr         Rastakhan's Rumble\
 \\n     ros        Rise of Shadows\
 \\n     sou        Saviors of Uldum\
-\\n     dod        Descent of Dragons"
+\\n     dod        Descent of Dragons\
+\\n     aoo        Ashes of Outlands"
 
 check :: CardMap -> IO ()
 check cm = do
