@@ -54,9 +54,11 @@ data CardSet = Classic
              | RiseOfShadows
              | SaviorsOfUldum
              | DescentOfDragons
+             | AshesOfOutlands
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
-data CardClass = Druid
+data CardClass = DemonHunter
+               | Druid
                | Hunter
                | Mage
                | Paladin
@@ -119,6 +121,7 @@ instance Show CardSet where
     show RiseOfShadows       = "Rise of Shadows"
     show SaviorsOfUldum      = "Saviors of Uldum"
     show DescentOfDragons    = "Descent of Dragons"
+    show AshesOfOutlands     = "Ashes of Outlands"
 
 instance Show CardQuantity where
     show Zero = "0"
@@ -147,23 +150,24 @@ instance Ord Card where
       where extract card = ( cardClass  card
                            , cardCost   card
                            , cardRarity card
-                           , cardId     card
+                           , cardName   card
                            )
 
 
 instance FromJSON CardClass where
-    parseJSON (String "DRUID"  ) = return Druid
-    parseJSON (String "HUNTER" ) = return Hunter
-    parseJSON (String "MAGE"   ) = return Mage
-    parseJSON (String "PALADIN") = return Paladin
-    parseJSON (String "PRIEST" ) = return Priest
-    parseJSON (String "ROGUE"  ) = return Rogue
-    parseJSON (String "SHAMAN" ) = return Shaman
-    parseJSON (String "WARLOCK") = return Warlock
-    parseJSON (String "WARRIOR") = return Warrior
-    parseJSON (String "NEUTRAL") = return Neutral
-    parseJSON (String s)         = expecting    "CardClass" s
-    parseJSON v                  = typeMismatch "CardClass" v
+    parseJSON (String "DEMONHUNTER") = return DemonHunter
+    parseJSON (String "DRUID"      ) = return Druid
+    parseJSON (String "HUNTER"     ) = return Hunter
+    parseJSON (String "MAGE"       ) = return Mage
+    parseJSON (String "PALADIN"    ) = return Paladin
+    parseJSON (String "PRIEST"     ) = return Priest
+    parseJSON (String "ROGUE"      ) = return Rogue
+    parseJSON (String "SHAMAN"     ) = return Shaman
+    parseJSON (String "WARLOCK"    ) = return Warlock
+    parseJSON (String "WARRIOR"    ) = return Warrior
+    parseJSON (String "NEUTRAL"    ) = return Neutral
+    parseJSON (String s)             = expecting    "CardClass" s
+    parseJSON v                      = typeMismatch "CardClass" v
 
 instance FromJSON CardRarity where
     parseJSON (String "COMMON"   ) = return Common
@@ -189,6 +193,7 @@ instance FromJSON CardSet where
     parseJSON (String "DALARAN"     ) = return RiseOfShadows
     parseJSON (String "ULDUM"       ) = return SaviorsOfUldum
     parseJSON (String "DRAGONS"     ) = return DescentOfDragons
+    parseJSON (String "BLACK_TEMPLE") = return AshesOfOutlands
     parseJSON (String s)              = expecting    "CardSet" s
     parseJSON v                       = typeMismatch "CardSet" v
 
@@ -222,12 +227,10 @@ cardSets = [minBound..maxBound]
 
 cardStandardSets :: [CardSet]
 cardStandardSets = [ Classic
-                   , Witchwood
-                   , Boomsday
-                   , RastakhansRumble
                    , RiseOfShadows
                    , SaviorsOfUldum
                    , DescentOfDragons
+                   , AshesOfOutlands
                    ]
 
 cardClasses :: [CardClass]
