@@ -54,7 +54,7 @@ data CardSet = Classic
              | RiseOfShadows
              | SaviorsOfUldum
              | DescentOfDragons
-             | AshesOfOutlands
+             | AshesOfOutland
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = DemonHunter
@@ -68,7 +68,7 @@ data CardClass = DemonHunter
                | Warlock
                | Warrior
                | Neutral
-               deriving (Show, Read, Eq, Ord, Enum, Bounded, Typeable)
+               deriving (Read, Eq, Ord, Enum, Bounded, Typeable)
 
 data CardRarity = Common
                 | Rare
@@ -104,6 +104,19 @@ data Card = Card { cardId       :: CardId,
 
 -- instances
 
+instance Show CardClass where
+  show DemonHunter = "Demon Hunter"
+  show Druid       = "Druid"
+  show Hunter      = "Hunter"
+  show Mage        = "Mage"
+  show Paladin     = "Paladin"
+  show Priest      = "Priest"
+  show Rogue       = "Rogue"
+  show Shaman      = "Shaman"
+  show Warlock     = "Warlock"
+  show Warrior     = "Warrior"
+  show Neutral     = "Neutral"
+
 instance Show CardSet where
   show Classic             = "Classic"
   show HallOfFame          = "Hall of Fame"
@@ -120,7 +133,7 @@ instance Show CardSet where
   show RiseOfShadows       = "Rise of Shadows"
   show SaviorsOfUldum      = "Saviors of Uldum"
   show DescentOfDragons    = "Descent of Dragons"
-  show AshesOfOutlands     = "Ashes of Outlands"
+  show AshesOfOutland      = "Ashes of Outland"
 
 instance Show CardQuantity where
   show Zero = "0"
@@ -192,7 +205,7 @@ instance FromJSON CardSet where
   parseJSON (String "DALARAN"     ) = return RiseOfShadows
   parseJSON (String "ULDUM"       ) = return SaviorsOfUldum
   parseJSON (String "DRAGONS"     ) = return DescentOfDragons
-  parseJSON (String "BLACK_TEMPLE") = return AshesOfOutlands
+  parseJSON (String "BLACK_TEMPLE") = return AshesOfOutland
   parseJSON (String s)              = expecting    "CardSet" s
   parseJSON v                       = typeMismatch "CardSet" v
 
@@ -224,7 +237,7 @@ cardStandardSets = [ Classic
                    , RiseOfShadows
                    , SaviorsOfUldum
                    , DescentOfDragons
-                   , AshesOfOutlands
+                   , AshesOfOutland
                    ]
 
 cardClasses :: [CardClass]
