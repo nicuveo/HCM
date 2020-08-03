@@ -55,6 +55,7 @@ data CardSet = Classic
              | SaviorsOfUldum
              | DescentOfDragons
              | AshesOfOutland
+             | ScholomanceAcademy
              deriving (Eq, Ord, Enum, Bounded, Typeable)
 
 data CardClass = DemonHunter
@@ -101,7 +102,6 @@ data Card = Card { cardId       :: CardId,
 
 
 
-
 -- instances
 
 instance Show CardClass where
@@ -134,6 +134,7 @@ instance Show CardSet where
   show SaviorsOfUldum      = "Saviors of Uldum"
   show DescentOfDragons    = "Descent of Dragons"
   show AshesOfOutland      = "Ashes of Outland"
+  show ScholomanceAcademy  = "Scholomance Academy"
 
 instance Show CardQuantity where
   show Zero = "0"
@@ -206,6 +207,7 @@ instance FromJSON CardSet where
   parseJSON (String "ULDUM"       ) = return SaviorsOfUldum
   parseJSON (String "DRAGONS"     ) = return DescentOfDragons
   parseJSON (String "BLACK_TEMPLE") = return AshesOfOutland
+  parseJSON (String "SCHOLOMANCE" ) = return ScholomanceAcademy
   parseJSON (String s)              = expecting    "CardSet" s
   parseJSON v                       = typeMismatch "CardSet" v
 
@@ -238,6 +240,7 @@ cardStandardSets = [ Classic
                    , SaviorsOfUldum
                    , DescentOfDragons
                    , AshesOfOutland
+                   , ScholomanceAcademy
                    ]
 
 cardClasses :: [CardClass]

@@ -143,6 +143,7 @@ readPredicate = either throwError return . fmap foldPred . mapM readPred
         rs "sou" = Right SaviorsOfUldum
         rs "dod" = Right DescentOfDragons
         rs "aoo" = Right AshesOfOutland
+        rs "sa"  = Right ScholomanceAcademy
         rs s     = Left $ s ++ " is not a valid set"
 
 readHeroes :: MonadError String m => [String] -> m [CardClass]
@@ -204,7 +205,7 @@ stats sets hs = do
       putStrLn $ "Current cards dust value: " ++ show cd
       T.putStrLn $ T.format "Missing cards dust value: {} ({}%)" (md, div (100 * md) ad)
       let buyableSets = reverse $ sort [(round $ packValue s cards, s) | s <- sets \\ [HallOfFame]]
-      sequence_ [ T.putStrLn $ T.format "{} pack value: {}" (T.left 18 ' ' $ show s, T.left 3  ' ' $ show c)
+      sequence_ [ T.putStrLn $ T.format "{} pack value: {}" (T.left 19 ' ' $ show s, T.left 3  ' ' $ show c)
                 | (c,s) <- buyableSets
                 ]
     else forM_ heroes $ \h -> do
@@ -318,7 +319,8 @@ help = putStrLn "usage: hcs cmd [args]\
 \\n     ros        Rise of Shadows\
 \\n     sou        Saviors of Uldum\
 \\n     dod        Descent of Dragons\
-\\n     aoo        Ashes of Outland"
+\\n     aoo        Ashes of Outland\
+\\n     sa         Scholomance Academy"
 
 check :: CardMap -> IO ()
 check cm = do
